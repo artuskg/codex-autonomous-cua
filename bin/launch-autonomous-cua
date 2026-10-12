@@ -1,0 +1,46 @@
+#!/bin/zsh
+set -eu
+
+adapter_root="${0:A:h:h}"
+app_root="${AUTONOMOUS_CUA_APP_ROOT:-/Applications/ChatGPT.app}"
+app_resources="$app_root/Contents/Resources"
+app_node="$app_resources/cua_node/bin/node"
+app_node_modules="$app_resources/cua_node/lib/node_modules"
+repl_entry="$app_node_modules/@oai/cua-repl/bin/cua-repl.mjs"
+node_repl="$app_resources/cua_node/bin/node_repl"
+codex_home_path="${CODEX_HOME:-${HOME:?HOME is required}/.codex}"
+
+for required_path in "$app_node" "$repl_entry" "$node_repl"; do
+  if [[ ! -e "$required_path" ]]; then
+    print -u2 -- "autonomous-cua: required desktop runtime path is missing: $required_path"
+    exit 66
+  fi
+done
+
+overlay_path="$("$app_node" "$adapter_root/scripts/build-overlay.mjs")"
+browser_service="$overlay_path/node_modules/@oai/browser-desktop/scripts/browser-service.mjs"
+sky_service="$overlay_path/node_modules/@oai/sky/dist/project/cua/sky_js/src/service.js"
+app_version="$(/usr/bin/plutil -extract CFBundleShortVersionString raw -o - "$app_root/Contents/Info.plist")"
+trusted_services="$("$app_node" -e 'process.stdout.write(JSON.stringify({browser:process.argv[1],sky:process.argv[2]}))' "$browser_service" "$sky_service")"
+
+export AUTONOMOUS_CUA=1
+export BROWSER_USE_SECURITY_MODE=autonomous-vm
+export NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS="${NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS:-1000}"
+export NODE_REPL_NODE_MODULE_DIRS="$overlay_path/node_modules:$app_node_modules"
+export NODE_REPL_NODE_PATH="$app_node"
+export NODE_REPL_TRUSTED_CODE_PATHS="$overlay_path:$codex_home_path:$app_node_modules"
+export CODEX_HOME="$codex_home_path"
+export BROWSER_USE_AVAILABLE_BACKENDS="${BROWSER_USE_AVAILABLE_BACKENDS:-chrome,iab,mcpapps}"
+export BROWSER_USE_TINYSKY_ENABLED=1
+export NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER="Operate the ChatGPT in-app browser through the Browser plugin."
+export NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME="Operate Chrome through the Chrome plugin when available. Use a different control surface only when the user asks for one."
+export NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE="Operate permitted macOS applications through Computer Use."
+export BROWSER_USE_CODEX_APP_BUILD_FLAVOR=prod
+export BROWSER_USE_CODEX_APP_VERSION="$app_version"
+export NODE_REPL_TRUSTED_SERVICES="$trusted_services"
+export SKY_CUA_SERVICE_PATH="${SKY_CUA_SERVICE_PATH:-$codex_home_path/computer-use/Codex Computer Use.app}"
+export CODEX_CLI_PATH="${CODEX_CLI_PATH:-$app_resources/codex-cli/CodexCLI.app/Contents/MacOS/codex}"
+export CUA_REPL_NODE_REPL_PATH="$node_repl"
+export CUA_REPL_ENABLED_SURFACES=browser,computer
+
+exec "$app_node" "$repl_entry"
