@@ -15,7 +15,7 @@ The original adapter code and documentation are available under the
 see [NOTICE.md](NOTICE.md).
 
 The adapter is currently validated with Codex CLI `0.162.1` and ChatGPT
-desktop `26.1007.30912` (`20156`). Its exact-match transforms deliberately
+desktop `26.1007.71326` (`20398`). Its exact-match transforms deliberately
 fail closed if a later desktop build moves a required source seam.
 
 ## Install

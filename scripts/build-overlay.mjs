@@ -37,6 +37,16 @@ function invariant(condition, message) {
   }
 }
 
+// Minified identifiers may contain `$`, which is special both in regular
+// expressions and in string replacement patterns.
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function declarationPattern(identifier, rest) {
+  return new RegExp(`(?<![\\w$])${escapeRegExp(identifier)}=${rest}`);
+}
+
 function occurrences(source, needle) {
   let count = 0;
   let offset = 0;
@@ -79,7 +89,7 @@ function transformBrowser(source) {
   const enumVariable = enumMatches[0][1];
   source = source.replace(
     enumPattern,
-    `$&${enumVariable}.AutonomousVm="autonomous-vm",`,
+    (seam) => `${seam}${enumVariable}.AutonomousVm="autonomous-vm",`,
   );
 
   const tablePattern =
@@ -88,11 +98,11 @@ function transformBrowser(source) {
   invariant(tableMatches.length === 1, "Browser security-mode policy table seam is not unique");
   const [matched, defaultBypassSet, disabledBypassSet, consentSet] = tableMatches[0];
   invariant(
-    new RegExp(`${defaultBypassSet}=new Set(?:\\(\\))?[,;]`).test(source),
+    declarationPattern(defaultBypassSet, "new Set(?:\\(\\))?[,;]").test(source),
     "Browser default bypass set is no longer empty",
   );
   const consentDeclaration = source.match(
-    new RegExp(`${consentSet}=new Set\\(\\[([^\\]]+)\\]\\)`),
+    declarationPattern(consentSet, "new Set\\(\\[([^\\]]+)\\]\\)"),
   );
   invariant(consentDeclaration, "Browser consent-operation set was not found");
   for (const operation of [
@@ -117,9 +127,10 @@ function transformBrowser(source) {
   );
   const replacement = matched.replace(
     '"gaas-browser-environment":',
-    `"autonomous-vm":{bypassedSecurityChecks:${defaultBypassSet},operationsWithoutUserConsent:${consentSet}},"gaas-browser-environment":`,
+    () =>
+      `"autonomous-vm":{bypassedSecurityChecks:${defaultBypassSet},operationsWithoutUserConsent:${consentSet}},"gaas-browser-environment":`,
   );
-  source = source.replace(matched, replacement);
+  source = source.replace(matched, () => replacement);
 
   invariant(
     occurrences(source, '"autonomous-vm"') === 2,
@@ -159,7 +170,7 @@ function transformSky(source) {
   );
   const syntheticApproval = `${variable}=async()=>({action:"accept",content:{source:"computer-use-persisted-state"},_meta:{persist:"session"}})`;
   source = source.slice(0, matches[0].index) +
-    source.slice(matches[0].index).replace(binding, syntheticApproval);
+    source.slice(matches[0].index).replace(binding, () => syntheticApproval);
 
   invariant(
     occurrences(source, 'b("createElicitation")') === 1,
