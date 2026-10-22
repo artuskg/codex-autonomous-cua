@@ -59,7 +59,7 @@ if (
 }
 const hooks = await listPluginHooks(codex, cwd, pluginId);
 if (
-  hooks.length !== 3 ||
+  hooks.length !== 5 ||
   hooks.some((hook) => !hook.enabled || hook.trustStatus !== "trusted")
 ) {
   throw new Error(`plugin hook trust validation failed: ${JSON.stringify(hooks)}`);

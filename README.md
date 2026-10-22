@@ -16,9 +16,17 @@ Clone this repository, then run:
 /Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node scripts/install.mjs
 ```
 
-The installer builds the overlay and runs one quick runtime test before activation. It stages the shim under `~/.local/share/codex-autonomous-cua`, registers the `autonomous-cua-local` personal marketplace, enables its `unified-computer-use` plugin, disables only `unified-computer-use@openai-bundled`, and configures the three `autonomous_cua_repl` tools and their exact lifecycle cleanup hooks. The previous shim is kept at `~/.local/share/codex-autonomous-cua.previous`; an activation failure restores it and the prior configuration.
+The installer builds the overlay and runs one quick runtime test before activation. It stages the shim under `~/.local/share/codex-autonomous-cua`, registers the `autonomous-cua-local` personal marketplace, enables its `unified-computer-use` plugin, disables only `unified-computer-use@openai-bundled`, and configures the three `autonomous_cua_repl` tools, their exact lifecycle cleanup hooks, and two agent-instruction hooks. The previous shim is kept at `~/.local/share/codex-autonomous-cua.previous`; an activation failure restores it and the prior configuration.
 
 Start a new chat after installation; restart the desktop app when it has also been upgraded. An existing conversation keeps its loaded tool server until it is reloaded.
+
+## Agents discover the shim automatically
+
+The installed plugin injects its short `agent-instructions.md` through **SessionStart** and **SubagentStart** hooks. New chats, resumed/forked sessions, post-compaction continuations, and subagents are told to use `autonomous_cua_repl` for browser and native app UI. The bundled `use-autonomous-cua` skill also appears in skill discovery. These files travel with every installation/update and contain no machine-specific paths; users do not need to copy instructions into their projects or global AGENTS.md.
+
+The installer records trust for the two context hooks alongside the three cleanup hooks. The context hooks only print the packaged instruction file; they do not modify projects or user instructions. Disabling or rolling back the plugin stops its instruction injection. A host that disables plugin hooks will still discover the usage skill, but cannot receive the hook's automatic context.
+
+This removes repeat questions about routine app/site access already covered by the user's task. Separate code review, native policy denials, account boundaries, and audio consent still apply. Read the [packaged instructions](marketplace/plugins/unified-computer-use/agent-instructions.md) for the exact routing rule. The repository's AGENTS.md is for maintainers; it is not the distribution mechanism.
 
 ## Update
 
@@ -28,7 +36,7 @@ Tell the agent **“Update our shim.”** The installed plugin includes the `upd
 "$HOME/.local/share/codex-autonomous-cua/bin/update-autonomous-cua"
 ```
 
-The command fetches the latest shim from this repository's `main` branch into a temporary checkout, rebuilds against the installed desktop app, tests the runtime once, and refreshes the local plugin and cleanup-hook trust. It never pulls into or overwrites a working Git checkout. It refuses a downgrade and leaves the existing installation in place when a changed runtime seam cannot be adapted.
+The command fetches the latest shim from this repository's `main` branch into a temporary checkout, rebuilds against the installed desktop app, tests the runtime once, and refreshes the local plugin, agent instructions, and hook trust. It never pulls into or overwrites a working Git checkout. It refuses a downgrade and leaves the existing installation in place when a changed runtime seam cannot be adapted.
 
 For an offline rebuild of the installed shim:
 

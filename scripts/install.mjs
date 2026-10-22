@@ -79,8 +79,8 @@ async function main() {
     const installed = await run(codex, ["plugin", "add", pluginId, "--json"]);
     const cwd = process.env.AUTONOMOUS_CUA_HOOK_CWD ?? process.cwd();
     const hooks = await listPluginHooks(codex, cwd, pluginId);
-    if (hooks.length !== 3) {
-      throw new Error(`expected only the three cleanup hooks, found ${JSON.stringify(hooks.map(({ key, eventName }) => ({ key, eventName })))}`);
+    if (hooks.length !== 5) {
+      throw new Error(`expected two agent-context hooks and three cleanup hooks, found ${JSON.stringify(hooks.map(({ key, eventName }) => ({ key, eventName })))}`);
     }
     const configured = await configurePlugin("activate", hooks);
     const receipt = {
