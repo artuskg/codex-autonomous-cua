@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "name": "unified-computer-use",
   "description": "App-managed Browser and macOS Computer Use runtime with operator consent preauthorization and native policy checks retained.",
   "mcpServers": "./.mcp.json",

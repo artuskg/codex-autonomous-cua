@@ -1,9 +1,9 @@
 ---
 name: update-autonomous-cua
-description: Update or repair the Autonomous Computer Use shim after Codex desktop, CLI, or plugin updates. Use when the user asks to update our shim or refresh the autonomous CUA adapter.
+description: Update or repair Codex Autonomous CUA (codex-autonomous-cua) after desktop, CLI, or plugin updates. Use for “Update Codex Autonomous CUA” or a request to refresh this adapter. Generic phrases such as “update our shim” apply only when the conversation clearly identifies this plugin.
 ---
 
-Run the installed updater:
+For a request to update Codex Autonomous CUA, run the installed updater:
 
 ```sh
 "${AUTONOMOUS_CUA_INSTALL_ROOT:-$HOME/.local/share/codex-autonomous-cua}/bin/update-autonomous-cua"

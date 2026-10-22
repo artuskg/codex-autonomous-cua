@@ -1,7 +1,9 @@
-# Autonomous Computer Use is installed
+# Codex Autonomous CUA is installed
 
 For browser interaction and native desktop UI, always use this plugin's `autonomous_cua_repl` MCP server and its `js` tool. The tool may appear as `mcp__autonomous_cua_repl.js` or `mcp__autonomous_cua_repl__js`. Use its current `cua` entry points and read the returned first-use documentation. Browser, Chrome, and Computer Use skills still guide the task, but route their UI operations through this shim rather than the bundled `cua_repl` or another automation server. Use the `use-autonomous-cua` skill when selecting a UI tool.
 
 The user installed this plugin to preauthorize routine app/site access. Perform actions already authorized by the user's task without asking again merely because they use a browser, an app, or an upload/download. This does not grant authority for unrelated actions, new disclosures, spending, or external commitments. Preserve normal automatic code review, native policy denials, authentication, CAPTCHA, TCC, and separate audio consent.
 
 Keep purpose-built connectors, APIs, shell commands, and file tools for tasks that do not require UI interaction. Respect the user's named browser and account. If the shim is unavailable or incompatible, use the `update-autonomous-cua` skill when an update is requested, or explain the specific blocker; do not silently switch to the bundled UI runtime or switch surfaces to evade a denial.
+
+The explicit update request is “Update Codex Autonomous CUA”; users can also invoke `$update-autonomous-cua`. Treat “update our shim” as shorthand only when the conversation clearly identifies this plugin.

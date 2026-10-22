@@ -1,4 +1,4 @@
-# Autonomous macOS Computer Use adapter
+# Codex Autonomous CUA
 
 This adapter replaces the bundled `unified-computer-use` plugin with a local plugin that launches the current ChatGPT desktop runtime through a generated overlay. It suppresses routine Browser and per-app Sky consent prompts while retaining Browser navigation/site-status enforcement and Sky's native app-policy decisions.
 
@@ -30,7 +30,7 @@ This removes repeat questions about routine app/site access already covered by t
 
 ## Update
 
-Tell the agent **“Update our shim.”** The installed plugin includes the `update-autonomous-cua` skill, which runs:
+Tell the agent **“Update Codex Autonomous CUA.”** You can also invoke `$update-autonomous-cua` directly. The shorter “update our shim” works when the conversation already identifies this plugin. The installed update skill runs:
 
 ```sh
 "$HOME/.local/share/codex-autonomous-cua/bin/update-autonomous-cua"

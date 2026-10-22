@@ -43,7 +43,7 @@ The local marketplace and plugin-scoped MCP approval settings are supported exte
 
 ## Agent-driven updates
 
-The plugin bundles an `update-autonomous-cua` skill and installs `bin/update-autonomous-cua`. A user can ask their agent to update the shim; the command fetches this repository’s `main` branch into a temporary checkout and runs the installer. `--rebuild` reapplies the installed code without network access, `--source` selects an explicit checkout, and `--check` performs preflight without activation. The installer builds and tests the candidate before swapping directories, preserves the previous installation, refreshes plugin installation and cleanup-hook trust, and restores the old files and configuration if activation fails. Concurrent installs and updates are serialized, and older shim versions cannot replace newer ones through the updater. No scheduled job is created.
+The plugin bundles an `update-autonomous-cua` skill and installs `bin/update-autonomous-cua`. A user can ask “Update Codex Autonomous CUA” or invoke `$update-autonomous-cua`; the command fetches this repository’s `main` branch into a temporary checkout and runs the installer. `--rebuild` reapplies the installed code without network access, `--source` selects an explicit checkout, and `--check` performs preflight without activation. The installer builds and tests the candidate before swapping directories, preserves the previous installation, refreshes plugin installation and cleanup-hook trust, and restores the old files and configuration if activation fails. Concurrent installs and updates are serialized, and older shim versions cannot replace newer ones through the updater. No scheduled job is created.
 
 ## Portable agent routing
 
