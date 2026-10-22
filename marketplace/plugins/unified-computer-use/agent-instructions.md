@@ -6,4 +6,4 @@ The user installed this plugin to preauthorize routine app/site access. Perform 
 
 Keep purpose-built connectors, APIs, shell commands, and file tools for tasks that do not require UI interaction. Respect the user's named browser and account. If the shim is unavailable or incompatible, use the `update-autonomous-cua` skill when an update is requested, or explain the specific blocker; do not silently switch to the bundled UI runtime or switch surfaces to evade a denial.
 
-The explicit update request is “Update Codex Autonomous CUA”; users can also invoke `$update-autonomous-cua`. Treat “update our shim” as shorthand only when the conversation clearly identifies this plugin.
+Use the `update-autonomous-cua` skill for “Update Codex Autonomous CUA”, “update no approvals codex”, “update no approvals cua”, and natural variations of those requests. Users can also invoke `$update-autonomous-cua`. Treat “update our shim” as shorthand only when the conversation clearly identifies this plugin.

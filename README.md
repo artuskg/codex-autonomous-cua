@@ -30,7 +30,7 @@ This removes repeat questions about routine app/site access already covered by t
 
 ## Update
 
-Tell the agent **“Update Codex Autonomous CUA.”** You can also invoke `$update-autonomous-cua` directly. The shorter “update our shim” works when the conversation already identifies this plugin. The installed update skill runs:
+Tell the agent **“Update Codex Autonomous CUA.”** Natural alternatives such as **“update no approvals codex”** and **“update no approvals cua”** select the same updater. You can also invoke `$update-autonomous-cua` directly. The shorter “update our shim” works when the conversation already identifies this plugin. The installed update skill runs:
 
 ```sh
 "$HOME/.local/share/codex-autonomous-cua/bin/update-autonomous-cua"

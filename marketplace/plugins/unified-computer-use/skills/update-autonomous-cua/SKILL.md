@@ -1,6 +1,6 @@
 ---
 name: update-autonomous-cua
-description: Update or repair Codex Autonomous CUA (codex-autonomous-cua) after desktop, CLI, or plugin updates. Use for “Update Codex Autonomous CUA” or a request to refresh this adapter. Generic phrases such as “update our shim” apply only when the conversation clearly identifies this plugin.
+description: Update or repair Codex Autonomous CUA (codex-autonomous-cua) after desktop, CLI, or plugin updates. Recognize requests such as “Update Codex Autonomous CUA”, “update no approvals codex”, and “update no approvals cua”, including natural variations. Generic phrases such as “update our shim” apply only when the conversation clearly identifies this plugin.
 ---
 
 For a request to update Codex Autonomous CUA, run the installed updater:
