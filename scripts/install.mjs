@@ -1,155 +1,128 @@
 import { execFile } from "node:child_process";
-import {
-  access,
-  chmod,
-  cp,
-  mkdir,
-  readFile,
-  rename,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { access, chmod, cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { configurePlugin } from "./configure-plugin.mjs";
+import { configurePlugin, configPath } from "./configure-plugin.mjs";
 import { listPluginHooks } from "./list-plugin-hooks.mjs";
+import { appNode, chooseCodex, installRoot, pluginId } from "./paths.mjs";
 
-const execFileAsync = promisify(execFile);
+const exec = promisify(execFile);
 const sourceRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const installRoot =
-  process.env.AUTONOMOUS_CUA_INSTALL_ROOT ??
-  join(homedir(), ".local", "share", "codex-autonomous-cua");
 const marketplaceRoot = join(installRoot, "marketplace");
-const pluginId = "unified-computer-use@autonomous-cua-local";
-const launcherPlaceholder = "__AUTONOMOUS_CUA_LAUNCHER__";
-
-async function chooseCodex() {
-  for (const candidate of [
-    process.env.AUTONOMOUS_CUA_CODEX_PATH,
-    join(homedir(), ".local", "bin", "codex"),
-    "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
-  ]) {
-    if (!candidate) continue;
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      // Try the next current installation.
-    }
-  }
-  throw new Error("could not locate a current Codex CLI");
-}
+const run = (command, args, env = process.env) => exec(command, args, { env, maxBuffer: 8 * 1024 * 1024 });
 
 async function materializeMcpLauncher(stagingRoot) {
-  const manifestPath = join(
-    stagingRoot,
-    "marketplace",
-    "plugins",
-    "unified-computer-use",
-    ".mcp.json",
-  );
+  const manifestPath = join(stagingRoot, "marketplace/plugins/unified-computer-use/.mcp.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const server = manifest.mcpServers?.autonomous_cua_repl;
-  if (server?.command !== launcherPlaceholder) {
-    throw new Error(
-      `refusing to rewrite unexpected autonomous_cua_repl command in ${manifestPath}`,
-    );
+  if (!["__AUTONOMOUS_CUA_LAUNCHER__", join(sourceRoot, "bin/launch-autonomous-cua")].includes(server?.command)) {
+    throw new Error(`unexpected autonomous_cua_repl command in ${manifestPath}`);
   }
-  const launcher = join(installRoot, "bin", "launch-autonomous-cua");
+  const launcher = join(installRoot, "bin/launch-autonomous-cua");
   server.command = launcher;
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   return launcher;
 }
 
-async function run(command, args) {
-  return execFileAsync(command, args, {
-    env: process.env,
-    maxBuffer: 16 * 1024 * 1024,
-  });
-}
-
 async function main() {
+  const args = process.argv.slice(2);
+  if (args.some((arg) => arg !== "--check")) throw new Error("Usage: install.mjs [--check]");
+  const checkOnly = args.includes("--check");
+  const codex = await chooseCodex();
   const parent = dirname(installRoot);
   await mkdir(parent, { recursive: true });
-  const staging = `${installRoot}.staging-${process.pid}`;
-  await rm(staging, { recursive: true, force: true });
-  await mkdir(staging, { recursive: true });
-  for (const entry of [
-    "bin",
-    "marketplace",
-    "policy",
-    "scripts",
-    "README.md",
-    "PLAN.md",
-    "LICENSE",
-    "NOTICE.md",
-  ]) {
-    await cp(join(sourceRoot, entry), join(staging, entry), {
-      recursive: true,
-      preserveTimestamps: true,
-    });
+  const lock = `${installRoot}.install-lock`;
+  try { await mkdir(lock); } catch (error) {
+    if (error.code === "EEXIST") throw new Error(`another shim installation is running (${lock})`);
+    throw error;
   }
-  const launcher = await materializeMcpLauncher(staging);
-  await chmod(join(staging, "bin", "launch-autonomous-cua"), 0o755);
-  const nodePath =
-    "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node";
-  const verification = await run(nodePath, [
-    join(staging, "scripts", "verify-overlay.mjs"),
-  ]);
+  const staging = await mkdtemp(join(parent, ".autonomous-cua-install-"));
   const previous = `${installRoot}.previous`;
+  let swapped = false;
+  let hadPrevious = false;
+  let originalConfig;
+  let configCaptured = false;
   try {
+    for (const entry of ["bin", "marketplace", "policy", "scripts", "README.md", "PLAN.md", "LICENSE", "NOTICE.md"]) {
+      await cp(join(sourceRoot, entry), join(staging, entry), { recursive: true, preserveTimestamps: true });
+    }
+    const launcher = await materializeMcpLauncher(staging);
+    for (const entry of ["launch-autonomous-cua", "update-autonomous-cua"]) await chmod(join(staging, "bin", entry), 0o755);
+    const verification = JSON.parse((await run(appNode, [join(staging, "scripts/verify-overlay.mjs")])).stdout);
+    const smoke = JSON.parse((await run(appNode, [join(staging, "scripts/smoke-mcp.mjs")], {
+      ...process.env, AUTONOMOUS_CUA_LAUNCHER: join(staging, "bin/launch-autonomous-cua"),
+    })).stdout);
+    const version = JSON.parse(await readFile(join(staging, "marketplace/plugins/unified-computer-use/.codex-plugin/plugin.json"), "utf8")).version;
+    let revision = null;
+    try {
+      await access(join(sourceRoot, ".git"));
+      revision = (await run("git", ["-C", sourceRoot, "rev-parse", "HEAD"])).stdout.trim();
+    } catch { /* Installed copies have no Git checkout. */ }
+    if (checkOnly) {
+      process.stdout.write(`${JSON.stringify({ ok: true, checkOnly, version, verification, smoke }, null, 2)}\n`);
+      return;
+    }
+    try { originalConfig = await readFile(configPath); } catch (error) { if (error.code !== "ENOENT") throw error; }
+    configCaptured = true;
     await rm(previous, { recursive: true, force: true });
-    await rename(installRoot, previous);
+    try {
+      await rename(installRoot, previous);
+      hadPrevious = true;
+    } catch (error) { if (error.code !== "ENOENT") throw error; }
+    await rename(staging, installRoot);
+    swapped = true;
+    const marketplaces = await run(codex, ["plugin", "marketplace", "list"]);
+    const registered = marketplaces.stdout.split("\n").find((line) => /^autonomous-cua-local\s+/.test(line));
+    if (registered && !registered.includes(marketplaceRoot)) throw new Error(`autonomous-cua-local points at another installation: ${registered}`);
+    if (!registered) await run(codex, ["plugin", "marketplace", "add", marketplaceRoot, "--json"]);
+    const installed = await run(codex, ["plugin", "add", pluginId, "--json"]);
+    const cwd = process.env.AUTONOMOUS_CUA_HOOK_CWD ?? process.cwd();
+    const hooks = await listPluginHooks(codex, cwd, pluginId);
+    if (hooks.length !== 3) {
+      throw new Error(`expected only the three cleanup hooks, found ${JSON.stringify(hooks.map(({ key, eventName }) => ({ key, eventName })))}`);
+    }
+    const configured = await configurePlugin("activate", hooks);
+    const receipt = {
+      ok: true, installedAt: new Date().toISOString(), version, revision,
+      sourceRoot, installRoot, codex, launcher, updater: join(installRoot, "bin/update-autonomous-cua"),
+      pluginId, verification, smoke: { ...smoke, launcher },
+      pluginInstall: JSON.parse(installed.stdout),
+      trustedHooks: hooks.map(({ key, currentHash, eventName }) => ({ key, currentHash, eventName })),
+      configured, previous: hadPrevious ? previous : null, restartRequired: true,
+    };
+    await writeFile(join(installRoot, "INSTALL.json"), `${JSON.stringify(receipt, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
   } catch (error) {
-    if (error.code !== "ENOENT") throw error;
+    if (swapped || hadPrevious) {
+      try {
+        if (swapped) await rename(installRoot, `${installRoot}.failed-${Date.now()}`);
+        if (hadPrevious) {
+          await rename(previous, installRoot);
+        }
+        try {
+          await run(codex, ["plugin", hadPrevious ? "add" : "remove", pluginId, "--json"]);
+        } finally {
+          if (configCaptured) {
+            if (originalConfig) {
+              const temporary = `${configPath}.autonomous-cua-restore-${process.pid}`;
+              await writeFile(temporary, originalConfig, { mode: 0o600 });
+              await rename(temporary, configPath);
+            } else await rm(configPath, { force: true });
+          }
+        }
+      } catch (restoreError) {
+        throw new Error(`update failed: ${error.message}; restoring the previous installation also failed: ${restoreError.message}; previous files: ${previous}`, { cause: error });
+      }
+    }
+    throw error;
+  } finally {
+    await rm(staging, { recursive: true, force: true });
+    await rm(lock, { recursive: true, force: true });
   }
-  await rename(staging, installRoot);
-
-  const codex = await chooseCodex();
-  const marketplaces = await run(codex, ["plugin", "marketplace", "list"]);
-  if (!/^autonomous-cua-local\s+/m.test(marketplaces.stdout)) {
-    await run(codex, ["plugin", "marketplace", "add", marketplaceRoot, "--json"]);
-  }
-  const plugins = await run(codex, ["plugin", "list"]);
-  if (/^unified-computer-use@autonomous-cua-local\s+/m.test(plugins.stdout)) {
-    await run(codex, ["plugin", "remove", pluginId, "--json"]);
-  }
-  const installed = await run(codex, ["plugin", "add", pluginId, "--json"]);
-  const hookListing = await listPluginHooks(
-    codex,
-    process.env.AUTONOMOUS_CUA_HOOK_CWD ?? process.cwd(),
-    pluginId,
-  );
-  if (hookListing.length !== 3) {
-    throw new Error(
-      `expected exactly three lifecycle hooks for ${pluginId}, found ${hookListing.length}`,
-    );
-  }
-  const configured = await configurePlugin("activate", hookListing);
-  const receipt = {
-    installedAt: new Date().toISOString(),
-    sourceRoot,
-    installRoot,
-    codex,
-    launcher,
-    pluginId,
-    verification: JSON.parse(verification.stdout),
-    pluginInstall: JSON.parse(installed.stdout),
-    trustedHooks: hookListing.map(({ key, currentHash, eventName }) => ({
-      key,
-      currentHash,
-      eventName,
-    })),
-    configured,
-    restartRequired: true,
-  };
-  await writeFile(join(installRoot, "INSTALL.json"), `${JSON.stringify(receipt, null, 2)}\n`);
-  process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
 }
 
 main().catch((error) => {
-  process.stderr.write(`${error.stack ?? error}\n`);
+  process.stderr.write(`${error.stderr || error.message}\n`);
   process.exitCode = 1;
 });

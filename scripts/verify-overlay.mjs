@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { buildOverlay } from "./build-overlay.mjs";
+import { buildOverlay, transformSky } from "./build-overlay.mjs";
 
 const { path, manifest, cached } = await buildOverlay();
 const browser = await readFile(
@@ -21,6 +21,7 @@ const cuaDocs = await readFile(
   ),
   "utf8",
 );
+const sourceSky = await readFile(join(manifest.app.path, "Contents/Resources/cua_node/lib/node_modules/@oai/sky/dist/project/cua/sky_js/src/targets/mac/computer-use-policy.js"), "utf8");
 const checks = {
   browserMode: browser.includes('AutonomousVm="autonomous-vm"'),
   browserPolicy: /"autonomous-vm":\{bypassedSecurityChecks:[A-Za-z_$][\w$]*,operationsWithoutUserConsent:[A-Za-z_$][\w$]*\}/.test(
@@ -31,7 +32,7 @@ const checks = {
   skyPolicy: sky.includes(".getAppPolicy("),
   skyDenied: sky.includes('case"denied"'),
   skyForbidden: sky.includes('case"forbidden"'),
-  skyOnlyAudioPrompt: (sky.match(/b\("createElicitation"\)/g) ?? []).length === 1,
+  skyOnlyAudioPrompt: sky === transformSky(sourceSky),
   cuaLocalPolicySelector: cuaDocs.includes("AUTONOMOUS_CUA"),
   nativeServiceUnmodified: manifest.guarantees.nativeComputerUseServiceUnmodified,
 };

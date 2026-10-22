@@ -1,28 +1,19 @@
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { listPluginHooks } from "./list-plugin-hooks.mjs";
+import { chooseCodex, installRoot } from "./paths.mjs";
 
 const execFileAsync = promisify(execFile);
-const codex =
-  process.env.AUTONOMOUS_CUA_CODEX_PATH ??
-  join(homedir(), ".local", "bin", "codex");
+const codex = await chooseCodex();
 const cwd = process.env.AUTONOMOUS_CUA_VERIFY_CWD ?? process.cwd();
 const pluginId = "unified-computer-use@autonomous-cua-local";
 const marketplaceName = "autonomous-cua-local";
 const serverName = "autonomous_cua_repl";
 const launcher =
   process.env.AUTONOMOUS_CUA_LAUNCHER ??
-  join(
-    homedir(),
-    ".local",
-    "share",
-    "codex-autonomous-cua",
-    "bin",
-    "launch-autonomous-cua",
-  );
+  join(installRoot, "bin", "launch-autonomous-cua");
 
 const { stdout } = await execFileAsync(
   codex,

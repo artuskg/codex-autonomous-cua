@@ -1,10 +1,10 @@
-import { copyFile, readFile, rename, stat, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { copyFile, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { codexHome } from "./paths.mjs";
 
-const configPath =
+export const configPath =
   process.env.AUTONOMOUS_CUA_CONFIG_PATH ??
-  join(homedir(), ".codex", "config.toml");
+  join(codexHome, "config.toml");
 const localPlugin = "unified-computer-use@autonomous-cua-local";
 const bundledPlugin = "unified-computer-use@openai-bundled";
 const serverName = "autonomous_cua_repl";
@@ -55,8 +55,14 @@ export async function configurePlugin(mode, hookTrust = []) {
   if (!new Set(["activate", "rollback"]).has(mode)) {
     throw new Error(`unknown plugin configuration mode: ${mode}`);
   }
-  const original = await readFile(configPath, "utf8");
-  const metadata = await stat(configPath);
+  let original = "";
+  let metadata = { mode: 0o600 };
+  let exists = false;
+  try {
+    original = await readFile(configPath, "utf8");
+    metadata = await stat(configPath);
+    exists = true;
+  } catch (error) { if (error.code !== "ENOENT") throw error; }
   const lines = original.replace(/\n$/, "").split("\n");
   const activating = mode === "activate";
   upsertSection(
@@ -119,10 +125,11 @@ export async function configurePlugin(mode, hookTrust = []) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backup = `${configPath}.pre-autonomous-cua-${timestamp}`;
   const temporary = `${configPath}.autonomous-cua-${process.pid}.tmp`;
-  await copyFile(configPath, backup);
+  await mkdir(dirname(configPath), { recursive: true });
+  if (exists) await copyFile(configPath, backup);
   await writeFile(temporary, output, { mode: metadata.mode });
   await rename(temporary, configPath);
-  return { changed: true, configPath, backup };
+  return { changed: true, configPath, ...(exists ? { backup } : {}) };
 }
 
 if (process.argv[1]?.endsWith("configure-plugin.mjs")) {

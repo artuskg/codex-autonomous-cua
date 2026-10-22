@@ -1,18 +1,11 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { installRoot } from "./paths.mjs";
 
 const launcher =
   process.env.AUTONOMOUS_CUA_LAUNCHER ??
-  join(
-    homedir(),
-    ".local",
-    "share",
-    "codex-autonomous-cua",
-    "bin",
-    "launch-autonomous-cua",
-  );
+  join(installRoot, "bin", "launch-autonomous-cua");
 const child = spawn(launcher, [], { stdio: ["pipe", "pipe", "pipe"] });
 const pending = new Map();
 const stderr = [];
@@ -25,6 +18,11 @@ child.on("exit", (code, signal) => {
   const error = new Error(
     `cua_repl exited before replying: code=${code} signal=${signal}; ${stderr.join("")}`,
   );
+  for (const { reject } of pending.values()) reject(error);
+  pending.clear();
+});
+child.on("error", (error) => {
+  exited = true;
   for (const { reject } of pending.values()) reject(error);
   pending.clear();
 });
@@ -48,6 +46,7 @@ function notify(method, params) {
 }
 
 function request(method, params, timeoutMs = 45_000) {
+  if (exited) return Promise.reject(new Error("cua_repl is not running"));
   const id = nextId++;
   child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
   return new Promise((resolve, reject) => {

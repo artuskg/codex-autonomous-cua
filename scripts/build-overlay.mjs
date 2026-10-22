@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 const execFileAsync = promisify(execFile);
 const sourceFile = fileURLToPath(import.meta.url);
 const adapterRoot = dirname(dirname(sourceFile));
-const transformVersion = 2;
+const transformVersion = 3;
 
 const browserRelative = "@oai/browser-desktop/scripts/browser-service.mjs";
 const skyRelative =
@@ -150,20 +150,30 @@ function transformBrowser(source) {
   return source;
 }
 
-function transformSky(source) {
+export function transformSky(source) {
   invariant(
     occurrences(source, ".getAppPolicy(") === 1,
     "Sky getAppPolicy seam is not unique",
   );
-  invariant(
-    occurrences(source, 'b("createElicitation")') === 2,
-    "Sky no longer has the expected app and audio elicitation pair",
-  );
   const policyIndex = source.indexOf(".getAppPolicy(");
   const prefix = source.slice(0, policyIndex);
-  const matches = [...prefix.matchAll(/([A-Za-z_$][\w$]*)=b\("createElicitation"\)/g)];
+  // Older releases resolve a named capability; newer releases use a dedicated
+  // getter. Identify the app binding next to getAppPolicy, never the audio one.
+  const matches = [...prefix.matchAll(/([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(("createElicitation")?\)(?=[,;])/g)];
   invariant(matches.length === 1, "Sky app-consent binding is not unique before getAppPolicy");
-  const [binding, variable] = matches[0];
+  const [binding, variable, getter, namedCapability] = matches[0];
+  const resolver = `${getter}(${namedCapability ?? ""})`;
+  const resolverBinding = new RegExp(`=${escapeRegExp(resolver)}(?=[,;])`, "g");
+  invariant(
+    [...source.matchAll(resolverBinding)].length === 2,
+    "Sky no longer has the expected app and audio elicitation pair",
+  );
+  if (!namedCapability) {
+    invariant(
+      new RegExp(`function ${escapeRegExp(getter)}\\(\\)\\{[^{}]{0,700}globalThis\\.nodeRepl[^{}]{0,700}\\.createElicitation[^{}]{0,700}return [A-Za-z_$][\\w$]*\\}`).test(source),
+      "Sky app-consent getter no longer resolves nodeRepl.createElicitation",
+    );
+  }
   invariant(
     policyIndex - matches[0].index < 700,
     "Sky app-consent binding moved too far from getAppPolicy",
@@ -173,7 +183,7 @@ function transformSky(source) {
     source.slice(matches[0].index).replace(binding, () => syntheticApproval);
 
   invariant(
-    occurrences(source, 'b("createElicitation")') === 1,
+    [...source.matchAll(resolverBinding)].length === 1,
     "Sky audio elicitation was not preserved as the sole remaining prompt",
   );
   for (const marker of [

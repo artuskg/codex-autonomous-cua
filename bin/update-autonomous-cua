@@ -1,0 +1,9 @@
+#!/bin/zsh
+set -eu
+adapter_root="${0:A:h:h}"
+app_root="${AUTONOMOUS_CUA_APP_ROOT:-/Applications/ChatGPT.app}"
+node_path="$app_root/Contents/Resources/cua_node/bin/node"
+if [[ ! -x "$node_path" ]]; then
+  node_path="$(command -v node)"
+fi
+exec "$node_path" "$adapter_root/scripts/update.mjs" "$@"

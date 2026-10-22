@@ -19,6 +19,11 @@ export async function listPluginHooks(codex, cwd, pluginId) {
     for (const { reject } of pending.values()) reject(new Error(detail));
     pending.clear();
   });
+  child.on("error", (error) => {
+    exited = true;
+    for (const { reject } of pending.values()) reject(error);
+    pending.clear();
+  });
   const lines = createInterface({ input: child.stdout });
   lines.on("line", (line) => {
     let message;

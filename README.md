@@ -4,56 +4,54 @@ This adapter replaces the bundled `unified-computer-use` plugin with a local plu
 
 It does **not** modify or re-sign `/Applications/ChatGPT.app`, replace the signed Computer Use service, enable forbidden targets, bypass CAPTCHA/authentication barriers, or disable the lock-screen guardian.
 
-This repository does not redistribute the OpenAI runtime or generated overlays.
-It contains original adapter code plus short compatibility fingerprints used to
-locate required seams in a user's installed runtime. See [NOTICE.md](NOTICE.md).
+This repository contains original adapter code and short compatibility fingerprints. It does not redistribute the OpenAI runtime or generated overlays. See [NOTICE.md](NOTICE.md) for provenance, [LICENSE](LICENSE) for the MIT license on original code, and [PLAN.md](PLAN.md) for the design.
 
-See [PLAN.md](PLAN.md) for the design and compatibility boundary.
-
-The original adapter code and documentation are available under the
-[MIT License](LICENSE). Third-party components are not included in that grant;
-see [NOTICE.md](NOTICE.md).
-
-The adapter is currently validated with Codex CLI `0.162.1` and ChatGPT
-desktop `26.1007.71326` (`20398`). Its exact-match transforms deliberately
-fail closed if a later desktop build moves a required source seam.
+Validated on October 22, 2026 with standalone Codex CLI `0.163.0`, ChatGPT desktop `26.1016.61520` (build `21421`), and its bundled Browser/Chrome/unified Computer Use plugins `26.1016.61520`. The runtime packages are `@oai/browser-desktop 0.1.1`, `@oai/sky 0.7.12`, `@oai/cua 0.2.6`, and `@oai/cua-repl 0.1.2`. Both the earlier named-capability consent binding and the newer Sky consent getter are supported.
 
 ## Install
+
+Clone this repository, then run:
 
 ```sh
 /Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node scripts/install.mjs
 ```
 
-The installer:
+The installer builds the overlay and runs one quick runtime test before activation. It stages the shim under `~/.local/share/codex-autonomous-cua`, registers the `autonomous-cua-local` personal marketplace, enables its `unified-computer-use` plugin, disables only `unified-computer-use@openai-bundled`, and configures the three `autonomous_cua_repl` tools and their exact lifecycle cleanup hooks. The previous shim is kept at `~/.local/share/codex-autonomous-cua.previous`; an activation failure restores it and the prior configuration.
 
-1. stages the adapter under `~/.local/share/codex-autonomous-cua`;
-2. builds and verifies the overlay for the installed ChatGPT app;
-3. registers the `autonomous-cua-local` personal marketplace;
-4. installs and enables `unified-computer-use@autonomous-cua-local`;
-5. disables `unified-computer-use@openai-bundled`;
-6. sets `autonomous_cua_repl`'s `js`, `js_reset`, and `turn_ended` tools to `approve`; and
-7. records trust for this plugin's three exact, current-hash lifecycle cleanup hooks.
+Start a new chat after installation; restart the desktop app when it has also been upgraded. An existing conversation keeps its loaded tool server until it is reloaded.
 
-Restart ChatGPT after installation so new conversations load the local plugin. The currently running conversation keeps its already-loaded tool server.
+## Update
 
-## Update behavior
-
-The installer derives its paths from the current macOS user's home directory and materializes the MCP launch command for that account. The launcher reads `/Applications/ChatGPT.app` every time it starts. A new desktop source hash creates a new overlay under `~/.cache/codex-autonomous-cua/overlays/`. Exact-count transforms and postcondition checks fail closed when an app update moves a required seam.
-
-Codex CLI updates do not replace the personal plugin. If this adapter itself changes, rerun the installer to refresh the installed local copy.
-
-## Verify
+Tell the agent **“Update our shim.”** The installed plugin includes the `update-autonomous-cua` skill, which runs:
 
 ```sh
-/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node scripts/verify-overlay.mjs
-/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node scripts/smoke-mcp.mjs
+"$HOME/.local/share/codex-autonomous-cua/bin/update-autonomous-cua"
+```
+
+The command fetches the latest shim from this repository's `main` branch into a temporary checkout, rebuilds against the installed desktop app, tests the runtime once, and refreshes the local plugin and cleanup-hook trust. It never pulls into or overwrites a working Git checkout. It refuses a downgrade and leaves the existing installation in place when a changed runtime seam cannot be adapted.
+
+For an offline rebuild of the installed shim:
+
+```sh
+"$HOME/.local/share/codex-autonomous-cua/bin/update-autonomous-cua" --rebuild
+```
+
+Use `--check` to build and test without activation, or `--source /absolute/path/to/checkout` to install a local development version. Set `AUTONOMOUS_CUA_INSTALL_ROOT`, `AUTONOMOUS_CUA_APP_ROOT`, or `AUTONOMOUS_CUA_CODEX_PATH` for a custom installation. `CODEX_HOME` and `AUTONOMOUS_CUA_CONFIG_PATH` are respected.
+
+The launcher also detects desktop runtime changes on each start and automatically creates a new hash-keyed overlay when the source seams remain compatible. A CLI update does not replace the personal plugin. If an incompatible desktop update moves a seam, use the update command to fetch the adapter fix. App/CLI upgrades remain separate from a shim update; this command does not restart apps, kill servers, or create a background job.
+
+## Verify or roll back
+
+The update command already builds and tests the runtime. For an optional installation diagnostic:
+
+```sh
 /Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node scripts/verify-install.mjs
 ```
 
-## Roll back
+To return to bundled Computer Use:
 
 ```sh
 /Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node scripts/rollback.mjs
 ```
 
-Then restart ChatGPT. Rollback only switches plugin selection; it does not delete the generated cache or uninstall the local marketplace, so reactivation remains reversible.
+Then restart the app. Rollback switches plugin selection and retains generated caches and the local marketplace.
