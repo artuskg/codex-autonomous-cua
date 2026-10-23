@@ -108,15 +108,16 @@ export async function configurePlugin(mode, hookTrust = []) {
         typeof hook.key !== "string" ||
         !hook.key.startsWith(`${localPlugin}:`) ||
         typeof hook.currentHash !== "string" ||
-        !/^sha256:[0-9a-f]{64}$/.test(hook.currentHash)
+        hook.currentHash.length === 0
       ) {
-        throw new Error("refusing to trust a hook outside the installed local plugin");
+        throw new Error("hook trust requires a local plugin key and a nonempty trust value");
       }
+      // Codex owns this opaque token; newer versions return compound hashes.
       const escapedKey = hook.key.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
       upsertSection(
         lines,
         `[hooks.state."${escapedKey}"]`,
-        [`trusted_hash = "${hook.currentHash}"`],
+        [`trusted_hash = ${JSON.stringify(hook.currentHash)}`],
       );
     }
   }
