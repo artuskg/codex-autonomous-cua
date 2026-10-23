@@ -25,13 +25,13 @@ The activation boundary is plugin selection. There is deliberately no VM marker,
 4. Resolve trusted Browser and Sky services by absolute overlay paths. Put the overlay before the desktop app's packages in the trusted module search path.
 5. Fail closed unless every source transform matches exactly once and all postconditions pass. Publish generated overlays atomically; never patch the signed app or its bundled plugin cache.
 6. Install through a personal local marketplace, disable only `unified-computer-use@openai-bundled`, enable the local equivalent, and set the three `autonomous_cua_repl` MCP tools to `approve`.
-7. After installation, ask the local app-server for the materialized plugin hooks and trust only the five packaged hooks whose exact keys and current hashes it returns: three cleanup hooks and two instruction hooks. Treat each hash as an opaque Codex trust value without imposing a format.
+7. After installation, ask the local app-server for the materialized plugin hooks and trust only the five packaged hooks whose exact keys and current hashes it returns: three cleanup hooks and two instruction hooks. Pass these opaque trust values to Codex's configuration API, which handles their storage format.
 
 ## Validation
 
 - The installer builds the overlay once, including seam matching and syntax checks, and performs one MCP runtime smoke test that checks the exported tools, local policy, and application/browser state shape.
 - Installation refreshes the local plugin and its five current hook hashes. `verify-install.mjs` is an optional diagnostic for the enabled plugin, merged MCP registration, and hook trust.
-- `node --test tests/hook-trust.test.mjs` covers legacy and compound trust values, escaped string preservation, and rejection of missing values or hooks from another plugin.
+- `node --test tests/hook-trust.test.mjs` covers passing legacy and compound trust values unchanged to Codex, and rejection of missing values or hooks from another plugin. Set `AUTONOMOUS_CUA_TEST_CODEX` to a Codex 0.164.0 or later executable to also test native compound-hash storage in an isolated temporary config.
 - `node --test tests/sky-policy.test.mjs` covers both Sky consent-binding shapes and exercises the installed transformed policy with isolated app-policy/consent stubs. These tests preserve blocked-app decisions and the separate audio prompt; the MCP smoke test supplies live-runtime coverage.
 
 ## Rollback

@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
+import { pluginId as localPluginId } from "./paths.mjs";
 
-export async function listPluginHooks(codex, cwd, pluginId) {
+async function withAppServer(codex, cwd, run) {
   const child = spawn(codex, ["app-server", "--stdio"], {
     cwd,
     env: process.env,
@@ -71,6 +72,15 @@ export async function listPluginHooks(codex, cwd, pluginId) {
       capabilities: {},
     });
     notify("initialized", {});
+    return await run(request);
+  } finally {
+    lines.close();
+    if (!exited) child.kill("SIGTERM");
+  }
+}
+
+export async function listPluginHooks(codex, cwd, pluginId) {
+  return withAppServer(codex, cwd, async (request) => {
     const result = await request("hooks/list", { cwds: [cwd] });
     const entry = result.data?.find((item) => item.cwd === cwd);
     if (!entry) throw new Error(`hooks/list did not return cwd ${cwd}`);
@@ -78,8 +88,40 @@ export async function listPluginHooks(codex, cwd, pluginId) {
       throw new Error(`hooks/list returned errors: ${JSON.stringify(entry.errors)}`);
     }
     return entry.hooks.filter((hook) => hook.pluginId === pluginId);
-  } finally {
-    lines.close();
-    if (!exited) child.kill("SIGTERM");
-  }
+  });
+}
+
+export function hookTrustEdits(hooks) {
+  return hooks.map((hook) => {
+    if (
+      typeof hook.key !== "string" ||
+      !hook.key.startsWith(`${localPluginId}:`) ||
+      typeof hook.currentHash !== "string" ||
+      hook.currentHash.length === 0
+    ) {
+      throw new Error("hook trust requires a local plugin key and a nonempty trust value");
+    }
+    return {
+      keyPath: `hooks.state.${JSON.stringify(hook.key)}.trusted_hash`,
+      value: hook.currentHash,
+      mergeStrategy: "upsert",
+    };
+  });
+}
+
+export async function trustPluginHooks(codex, cwd, hooks, configPath) {
+  const edits = hookTrustEdits(hooks);
+  return withAppServer(codex, cwd, async (request) => {
+    // Codex translates opaque trust values into its current storage format.
+    const result = await request("config/batchWrite", {
+      edits,
+      filePath: configPath,
+      expectedVersion: null,
+      reloadUserConfig: true,
+    });
+    if (result.status !== "ok") {
+      throw new Error(`Codex could not apply hook trust: ${JSON.stringify(result)}`);
+    }
+    return result;
+  });
 }

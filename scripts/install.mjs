@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { configurePlugin, configPath } from "./configure-plugin.mjs";
-import { listPluginHooks } from "./list-plugin-hooks.mjs";
+import { listPluginHooks, trustPluginHooks } from "./list-plugin-hooks.mjs";
 import { appNode, chooseCodex, installRoot, pluginId } from "./paths.mjs";
 
 const exec = promisify(execFile);
@@ -82,7 +82,8 @@ async function main() {
     if (hooks.length !== 5) {
       throw new Error(`expected two agent-context hooks and three cleanup hooks, found ${JSON.stringify(hooks.map(({ key, eventName }) => ({ key, eventName })))}`);
     }
-    const configured = await configurePlugin("activate", hooks);
+    const configured = await configurePlugin("activate");
+    await trustPluginHooks(codex, cwd, hooks, configPath);
     const receipt = {
       ok: true, installedAt: new Date().toISOString(), version, revision,
       sourceRoot, installRoot, codex, launcher, updater: join(installRoot, "bin/update-autonomous-cua"),

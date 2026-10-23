@@ -51,7 +51,7 @@ function removeSection(lines, header) {
   lines.splice(section.start, section.end - section.start);
 }
 
-export async function configurePlugin(mode, hookTrust = []) {
+export async function configurePlugin(mode) {
   if (!new Set(["activate", "rollback"]).has(mode)) {
     throw new Error(`unknown plugin configuration mode: ${mode}`);
   }
@@ -101,23 +101,6 @@ export async function configurePlugin(mode, hookTrust = []) {
         lines,
         `[plugins."${localPlugin}".mcp_servers.${serverName}.tools.${tool}]`,
         ['approval_mode = "approve"'],
-      );
-    }
-    for (const hook of hookTrust) {
-      if (
-        typeof hook.key !== "string" ||
-        !hook.key.startsWith(`${localPlugin}:`) ||
-        typeof hook.currentHash !== "string" ||
-        hook.currentHash.length === 0
-      ) {
-        throw new Error("hook trust requires a local plugin key and a nonempty trust value");
-      }
-      // Codex owns this opaque token; newer versions return compound hashes.
-      const escapedKey = hook.key.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-      upsertSection(
-        lines,
-        `[hooks.state."${escapedKey}"]`,
-        [`trusted_hash = ${JSON.stringify(hook.currentHash)}`],
       );
     }
   }
