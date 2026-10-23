@@ -28,11 +28,13 @@ The installer records trust for the two context hooks alongside the three cleanu
 
 This removes repeat questions about routine app/site access already covered by the user's task. Separate code review, native policy denials, account boundaries, and audio consent still apply. Read the [packaged instructions](marketplace/plugins/unified-computer-use/agent-instructions.md) for the exact routing rule. The repository's AGENTS.md is for maintainers; it is not the distribution mechanism.
 
-### Clipboard and supporting local operations
+### Routing mixed workflows
 
-The UI routing rule covers clicks, typing, and other app/browser UI actions. It does not require file I/O or clipboard reads to have a CUA method. After an authorized Copy action through the shim, the agent can read macOS clipboard text directly with `LC_ALL=en_US.UTF-8 /usr/bin/pbpaste -Prefer txt` through its shell tool, verify the intended source, and save to the requested local destination. The current documented macOS CUA and Sky window APIs do not provide a clipboard-read method.
+Agents choose tools for each operation. Connectors, APIs, CLIs, and file tools handle the operations they support directly; the shim handles browser and desktop UI. A single workflow can use both, such as downloading through the browser and then processing the file locally. Each tool retains its normal checks, and the user's specified browser, account, and destination still apply.
 
-Version 1.2.2 makes this distinction explicit in the injected instructions and usage skill. Agents should not use an editor or cloud-synced document as a clipboard bridge: autosave can create unintended copies. The clipboard is shared, so capture must follow a successful Copy action and match the expected source. Native policy denials remain enforced.
+An absent convenience method can be handled by another documented capability in the same UI runtime or a supported non-UI tool. An actual policy or access denial cannot be bypassed through another route. Direct handoffs avoid unnecessary intermediary apps, autosaved documents, and synced copies; shared-state results must match the intended source.
+
+Version 1.2.3 puts these general rules in the injected instructions. Platform recipes live in the [usage skill](marketplace/plugins/unified-computer-use/skills/use-autonomous-cua/SKILL.md), including macOS clipboard capture through the shell after an authorized UI Copy. The routing change does not add runtime APIs or change policy enforcement.
 
 ## Update
 

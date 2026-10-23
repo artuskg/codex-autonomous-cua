@@ -1,22 +1,32 @@
 ---
 name: use-autonomous-cua
-description: Use the installed Autonomous Computer Use shim for browser interaction and native desktop UI tasks, including Copy actions followed by local clipboard capture. Select autonomous_cua_repl for UI; keep connectors, APIs, and local I/O on their appropriate tools.
+description: Use the installed Autonomous Computer Use shim for browser and desktop UI operations, including workflows that combine UI actions with connectors, APIs, or local tools.
 ---
 
-Read the plugin's [agent instructions](../../agent-instructions.md). Use the `autonomous_cua_repl` server's `js` tool and its current first-use `cua` documentation for UI actions. This is the installed UI runtime; generic `node_repl` references in Browser, Chrome, or Computer Use guidance do not mean starting a separate bundled UI server.
+Read the plugin's [agent instructions](../../agent-instructions.md). Use the `autonomous_cua_repl` server's `js` tool and its current first-use documentation for UI actions. Generic `node_repl` references in Browser, Chrome, or Computer Use guidance refer to this installed UI runtime; they do not require starting a separate bundled server.
 
-Do not ask for routine app/site consent again for actions within the user's request. Keep code review and native policy checks intact. If the tool is missing, report that the enabled plugin/new chat must load correctly; use the sibling `update-autonomous-cua` skill for a requested shim update. Do not silently change browser, account, or UI runtime.
+## Choose capabilities per operation
+
+Use purpose-built connectors, APIs, CLIs, and file tools when they directly support the requested operation, respecting the user's chosen tools and account. Use the shim for operations that observe or manipulate browser or desktop UI. A shell command that drives an app's UI still belongs on the UI route; a local data operation between UI actions belongs on its normal tool, with that tool's normal checks.
+
+Start with the current documented `cua` entry points. When a convenience method is missing, a documented lower-level API exposed by the same runtime may be appropriate. Supporting data or system operations can use another supported non-UI tool without requiring an equivalent CUA method. Do not invent methods, use undocumented internals, or execute general shell/file operations inside the UI runtime.
+
+A missing capability and an access denial require different responses. Diagnose an unclear error before choosing a fallback. An alternative must remain within the task's authority and preserve the account, destination, and applicable checks; it cannot evade a denial through another tool or a lower-level method. If the shim is unavailable, report the affected UI steps and continue useful non-UI work. Use the sibling `update-autonomous-cua` skill when a repair or update is requested.
+
+## Hand off data directly
+
+Use direct tool handoffs with the fewest unnecessary side effects. For example, parse a downloaded file with local tools, or prepare a requested upload locally before using the shim for the upload. These ordinary in-scope operations need no additional consent. Verify the file or shared-state result belongs to the intended source before accepting it.
+
+Keep transient data in memory where practical, or use an appropriate local file within the task's scope. Write deliverables to the intended destination. Avoid opening another app or service merely to inspect, convert, or shuttle data when direct tools suffice: intermediaries can autosave, sync, disclose, or alter it. A user-requested editor or cloud document remains a valid destination.
 
 ## Clipboard capture on macOS
 
-The current documented macOS CUA and Sky window APIs do not expose a clipboard-read method. Do not invent one or switch UI runtimes to look for it. Use the shim for the intended app's Copy action, then use the shell tool for the local clipboard read:
+Clipboard capture is one example of this general handoff rule. The current documented macOS CUA and Sky window APIs do not expose a clipboard-read method. After an authorized Copy action through the shim, read the clipboard with the shell tool:
 
 ```sh
 LC_ALL=en_US.UTF-8 /usr/bin/pbpaste -Prefer txt
 ```
 
-This supporting local I/O is allowed within an authorized copy/capture task; it does not require a CUA method. Read promptly after observing the Copy action succeed, and check the expected source header or other identifying content before accepting it. Clipboard contents are shared across apps and agents, so keep Copy and capture sequential. An empty, stale, or mismatched result is not a successful capture. Do not read unrelated existing clipboard contents merely because this skill is loaded.
+Read promptly after observing Copy succeed, and check the expected source header or other identifying content. The clipboard is shared across apps and agents, so keep Copy and capture sequential. An empty, stale, or mismatched result is not a successful capture. Do not read unrelated existing clipboard contents merely because this skill is loaded.
 
-Keep the result in memory or write directly to the task's intended local destination when persistence is requested, preserving newlines and UTF-8. `-Prefer txt` prefers text but can return RTF or PostScript when text is absent; check the returned format rather than claiming every result is plain text. Report unexpected encoding or format instead of silently guessing a conversion.
-
-Do not open TextEdit or another editor, paste into a document, or use a cloud-synced folder merely as a clipboard bridge. Those actions can create autosaved or synced copies and alter the content. If a direct read fails, report the concrete failure and use an available supported export or connector within the task's scope. This does not change an explicitly requested document-editing workflow or permit evading an app-policy denial.
+Preserve newlines and UTF-8 when capturing text. `-Prefer txt` prefers text but can return RTF or PostScript when text is absent; check the format and report unexpected results instead of guessing a conversion. If capture fails, diagnose it and use a supported export or connector within scope where available; pasting into an editor merely to read the clipboard adds unnecessary persistence.
