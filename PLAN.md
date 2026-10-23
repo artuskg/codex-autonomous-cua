@@ -48,3 +48,5 @@ The plugin bundles an `update-autonomous-cua` skill and installs `bin/update-aut
 ## Portable agent routing
 
 The enabled plugin supplies agent-instructions.md through SessionStart and SubagentStart command hooks, using PLUGIN_ROOT to locate the installed file. Codex adds their plain stdout to developer context. A discoverable use-autonomous-cua skill provides the same routing entry point on hosts that disable hooks. Installation and updates refresh the two context hooks and three existing cleanup hooks together. No user/global AGENTS.md is edited, and disabling the plugin disables its context injection.
+
+UI routing does not restrict supporting local I/O. The usage skill documents macOS clipboard reads with the system `pbpaste` utility after an authorized Copy action through the shim, with source/format checks and direct local capture. Neither the current documented macOS CUA API nor Sky's window API supplies a clipboard-read method. Editors and cloud-synced documents are not clipboard intermediaries. This capability gap requires instruction clarity, not a runtime patch or a broader UI fallback.

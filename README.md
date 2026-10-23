@@ -28,6 +28,12 @@ The installer records trust for the two context hooks alongside the three cleanu
 
 This removes repeat questions about routine app/site access already covered by the user's task. Separate code review, native policy denials, account boundaries, and audio consent still apply. Read the [packaged instructions](marketplace/plugins/unified-computer-use/agent-instructions.md) for the exact routing rule. The repository's AGENTS.md is for maintainers; it is not the distribution mechanism.
 
+### Clipboard and supporting local operations
+
+The UI routing rule covers clicks, typing, and other app/browser UI actions. It does not require file I/O or clipboard reads to have a CUA method. After an authorized Copy action through the shim, the agent can read macOS clipboard text directly with `LC_ALL=en_US.UTF-8 /usr/bin/pbpaste -Prefer txt` through its shell tool, verify the intended source, and save to the requested local destination. The current documented macOS CUA and Sky window APIs do not provide a clipboard-read method.
+
+Version 1.2.2 makes this distinction explicit in the injected instructions and usage skill. Agents should not use an editor or cloud-synced document as a clipboard bridge: autosave can create unintended copies. The clipboard is shared, so capture must follow a successful Copy action and match the expected source. Native policy denials remain enforced.
+
 ## Update
 
 Tell the agent **“Update Codex Autonomous CUA.”** Natural alternatives such as **“update no approvals codex”** and **“update no approvals cua”** select the same updater. You can also invoke `$update-autonomous-cua` directly. The shorter “update our shim” works when the conversation already identifies this plugin. The installed update skill runs:
