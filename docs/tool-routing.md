@@ -6,9 +6,11 @@ The desktop configuration transformer in build 21477 replaces `features.code_mod
 
 The reported live Work child had no UI executor. Its raw registered catalog, selected capability roots, and effective configuration were not exposed by the available diagnostics. Local registration and an isolated configuration probe are therefore insufficient to identify the failing stage in that child.
 
-## Local compatibility change
+## Local diagnostics and compatibility experiment
 
-Version 1.2.6 allows code-mode exposure and retains the deferred exclusion. When the host selects code-mode-only presentation, `js` and `js_reset` can be invoked through `tools.mcp__autonomous_cua_repl__js` and `tools.mcp__autonomous_cua_repl__js_reset`. Hosts that expose native tools retain a direct route. This uses the same registered MCP server and Core handler, without a parallel browser runtime or metadata injection.
+Version 1.2.6 preserves the original code-mode and deferred exclusions. The diagnostic exercises both direct and code-mode-only configurations with the installed descriptor. Both tested local Core versions retain a native invocation route in this case.
+
+A separate local experiment removed only the code-mode exclusion. Actual calls through `tools.mcp__autonomous_cua_repl__js` received Core-generated current-turn and permission metadata, and `turn_ended` remained hidden. That demonstrates local compatibility, not a repair for the failing Work task. The candidate is not included in the release because the live host's registration and filtering stage remain unknown.
 
 The diagnostic's loopback responder supplies only a deterministic model tool call. Core creates the session, turn, and permission metadata. A transparent observer compares that MCP metadata with the current model request and thread, without modifying the traffic; receipts retain comparison results rather than identifiers. The registered lifecycle tool retains `_meta.ui.visibility: []` and must be absent from both callable catalogs.
 
@@ -31,3 +33,13 @@ For a fresh direct task and a fresh delegated Work task using the same installed
 | Bound call reaches a native policy denial | That specific policy needs investigation. |
 
 Use a diagnostic correlation key and tool names; omit credentials, session/access identifiers, tool arguments, and page contents. A live browser check must use the host's own registered executor and a harmless task-owned page. Never replay another task's context to make it pass.
+
+The first platform patch should add three correlated events, without changing routing or access controls:
+
+| Event and placement | Minimal payload |
+| --- | --- |
+| Registration accepted, after successful `postExecutorRegistration()` | Diagnostic correlation key; accepted plugin IDs, versions, and manifest fingerprints. Record the accepted result, not merely the locally requested roots. |
+| Child configuration resolved, after inheritance and host overrides | Same correlation key; effective tool mode, direct-only namespaces, UI-server enabled state, and exposure exclusions. |
+| Tool catalog filtered, in the backend that owns the final catalog | Same correlation key; raw registered UI tool name, native/code-mode/deferred inclusion, and a reason when excluded, such as unregistered, disabled, policy-denied, app-only/lifecycle-only, over-budget, or surface-excluded. |
+
+The shim's local verifier cannot emit these as observations of a cloud task. The desktop/delegation platform must implement them in its source and expose a sanitized diagnostic result. A confirmed filtering failure can then justify a routing patch; missing registration or metadata requires its own fix.

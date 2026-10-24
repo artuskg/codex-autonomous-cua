@@ -2,17 +2,16 @@
 
 Each version records its user-visible changes and material verification limits. GitHub release notes use the corresponding entry. Earlier entries were reconstructed from the published releases and version commits.
 
-## 1.2.6 — 2026-10-24
+## 1.2.6 — Unreleased
 
-- Allow the registered CUA tools in code mode while retaining the deferred-catalog exclusion. This provides a callable route when the host presents tools through code mode. Native calls remain available when the host exposes them.
-- Keep `turn_ended` hidden from model invocation and reserved for lifecycle hooks. Both invocation routes use Core-generated turn and permission metadata.
-- Extend installation verification to inspect the registered catalog and exercise direct and code-mode dispatch through the installed Codex runtime. Report live delegated Work availability separately from the local configuration probe.
+- Extend installation verification to inspect the registered catalog and exercise dispatch in direct and code-mode-only configurations through the installed Codex runtime. Report live delegated Work availability separately from the local configuration probe.
+- Verify current-turn and permission metadata, and require `turn_ended` to remain hidden from model invocation and reserved for lifecycle hooks.
 - Label the installer smoke test as inventory-only, with fixture metadata and browser access explicitly unverified.
 - Add this version history and link it from the README.
 
-The local compatibility change does not patch the signed desktop app or establish the cause of missing tools in a live delegated Work task. The desktop's hotline-only namespace overwrite is reproducible, but both tested local Core versions already retain native CUA slots with the previous manifest. Live Work registration and catalog filtering require verification in that host.
+The release preserves the plugin's original exposure flags and the signed desktop app. The desktop's hotline-only namespace overwrite is reproducible, but both tested local Core versions retain native CUA slots with this manifest. The code-mode exposure alternative passed a local experiment; it was not established as a repair for the live Work failure and is not included. The routing document specifies the platform logging needed to distinguish registration, configuration, and catalog-filtering failures.
 
-Validation: three focused tests passed with standalone CLI 0.164.0 and with desktop 26.1016.62342's bundled CLI 0.163.0-alpha.11.2, including actual direct/code-mode dispatch, current-turn binding, retained permission metadata, and hidden lifecycle tools. Live delegated browser access remains unverified.
+Validation: three focused tests passed with standalone CLI 0.164.0 and with desktop 26.1016.62342's bundled CLI 0.163.0-alpha.11.2. They cover actual local Core catalog construction and MCP dispatch, current-turn binding, retained permission metadata, and hidden lifecycle tools. Live delegated browser access remains unverified; publication is held for a real-scenario test.
 
 ## 1.2.5 — 2026-10-24
 

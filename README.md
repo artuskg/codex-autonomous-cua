@@ -74,7 +74,7 @@ The update command already builds and checks runtime inventory. For an installat
 
 The diagnostic checks the enabled plugin, merged MCP configuration, registered tool catalog, and five trusted hooks. It then runs two isolated local Codex configurations: direct tools and code-mode-only tools with the hotline-only namespace override used by durable Work tasks. A deterministic loopback responder invokes the real registered MCP tool; no model service is called. It checks the returned marker, host-generated session/turn binding, permission metadata, and hidden lifecycle tool. It does not open a browser or create a persistent task.
 
-Version 1.2.6 permits code-mode exposure while keeping tools out of deferred discovery. The host can expose `js` and `js_reset` directly or through code mode; `turn_ended` stays hidden and available to lifecycle hooks. No desktop app code or browser security check is changed.
+Version 1.2.6 preserves the original code-mode and deferred-catalog exclusions. In the tested local Core versions, these exclusions retain native `js` and `js_reset` slots even with code-mode-only presentation and the hotline-only override. `turn_ended` stays hidden and available to lifecycle hooks. No desktop app code or browser security check is changed.
 
 The report separates `directLocal` from `delegated`. The latter includes a local configuration probe but remains `not_verified` for a live Work task: this CLI cannot observe that host's capability registration or final catalog. A successful install or local probe must not be reported as working delegated browser access. See [the routing investigation](docs/tool-routing.md) for the platform boundary and remaining live check.
 
