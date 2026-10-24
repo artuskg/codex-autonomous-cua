@@ -8,10 +8,11 @@ Each version records its user-visible changes and material verification limits. 
 - Verify current-turn and permission metadata, and require `turn_ended` to remain hidden from model invocation and reserved for lifecycle hooks.
 - Label the installer smoke test as inventory-only, with fixture metadata and browser access explicitly unverified.
 - Add this version history and link it from the README.
+- Prepare a local compatibility candidate that permits code-mode exposure while retaining the deferred exclusion. This remains an experiment pending a live Work retest.
 
-The release preserves the plugin's original exposure flags and the signed desktop app. The desktop's hotline-only namespace overwrite is reproducible, but both tested local Core versions retain native CUA slots with this manifest. The code-mode exposure alternative passed a local experiment; it was not established as a repair for the live Work failure and is not included. The routing document specifies the platform logging needed to distinguish registration, configuration, and catalog-filtering failures.
+The baseline retest with the original exposure flags still had no callable UI executor and failed at tool lookup, before MCP dispatch or browser execution. That result does not distinguish Work-host registration failure from catalog filtering. The desktop's hotline-only namespace overwrite is reproducible, but both tested local Core versions retain native CUA slots with the original manifest. The candidate changes only code-mode exposure; the signed desktop app and native policy checks remain unchanged.
 
-Validation: three focused tests passed with standalone CLI 0.164.0 and with desktop 26.1016.62342's bundled CLI 0.163.0-alpha.11.2. They cover actual local Core catalog construction and MCP dispatch, current-turn binding, retained permission metadata, and hidden lifecycle tools. Live delegated browser access remains unverified; publication is held for a real-scenario test.
+Validation: three focused tests passed for the candidate with standalone CLI 0.164.0 and with desktop 26.1016.62342's bundled CLI 0.163.0-alpha.11.2. They cover actual local Core catalog construction and MCP dispatch, current-turn binding, retained permission metadata, and hidden lifecycle tools. Live delegated browser access remains unverified; the version stays at 1.2.6 and publication is held for the candidate's real-scenario test. The routing document specifies the platform logging needed to distinguish registration, configuration, and catalog-filtering failures.
 
 ## 1.2.5 — 2026-10-24
 

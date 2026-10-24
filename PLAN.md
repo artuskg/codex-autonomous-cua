@@ -44,7 +44,7 @@ Disable `unified-computer-use@autonomous-cua-local` and re-enable `unified-compu
 
 The local marketplace and plugin-scoped MCP approval settings are supported extension points. The Browser, Sky, and CUA source transforms are reverse-engineered adapters. Desktop updates should normally rebuild automatically; a changed source seam requires updating and revalidating this adapter. Dot compatibility is maximized by preserving the plugin name, server name, tool names, and hooks, but must be rechecked after desktop updates because the exact bundled plugin identity is not a documented Dot contract.
 
-Version 1.2.6 preserves the descriptor's code-mode and deferred exclusions. A local code-mode exposure experiment passed context and lifecycle checks but did not establish a repair for the live Work failure, so it is not shipped. The tested local Core versions retain native CUA slots with the original exclusions. The shim does not alter the desktop's durable-task configuration transformer; [the platform follow-up](docs/tool-routing.md) specifies the missing diagnostics in the owning registration and catalog path.
+The unreleased 1.2.6 candidate removes the code-mode exclusion while preserving the deferred exclusion. Local context and lifecycle checks passed for this route, but a live Work repair is not yet established. A fresh delegated retest with the original exclusions still failed before dispatch. The version remains unchanged for the candidate comparison, and publication is held. The shim does not alter the desktop's durable-task configuration transformer; [the platform follow-up](docs/tool-routing.md) specifies the missing diagnostics in the owning registration and catalog path.
 
 ## Agent-driven updates
 

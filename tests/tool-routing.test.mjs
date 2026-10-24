@@ -31,7 +31,7 @@ test("dispatch evidence must match the current Core turn and retain permission c
   assert.equal(contextMatches(null, expected, expected.thread_id), false);
 });
 
-test("native Core preserves the registered route in direct and delegated configurations", {
+test("native Core preserves context and lifecycle hiding on direct and code-mode routes", {
   skip: !process.env.AUTONOMOUS_CUA_TEST_CODEX,
 }, async () => {
   const manifest = JSON.parse(await readFile(new URL("../marketplace/plugins/unified-computer-use/.mcp.json", import.meta.url), "utf8"));
@@ -42,6 +42,6 @@ test("native Core preserves the registered route in direct and delegated configu
   });
   assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(result.directLocal.route, "direct");
-  assert.equal(result.delegated.localConfigurationProbe.route, "direct");
+  assert.equal(result.delegated.localConfigurationProbe.route, "code_mode");
   assert.equal(result.delegated.status, "not_verified");
 });

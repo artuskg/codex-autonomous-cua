@@ -6,11 +6,15 @@ The desktop configuration transformer in build 21477 replaces `features.code_mod
 
 The reported live Work child had no UI executor. Its raw registered catalog, selected capability roots, and effective configuration were not exposed by the available diagnostics. Local registration and an isolated configuration probe are therefore insufficient to identify the failing stage in that child.
 
+A fresh delegated Work retest on October 24 with the original exclusions again had no callable UI executor. The code-mode lookup failed with `tools.mcp__autonomous_cua_repl__js is not a function`, before MCP dispatch; no browser operation ran. A separate attempt to inspect runtime hooks failed because the task's read-only configuration directory prevented SQLite initialization. That filesystem failure provides no evidence about browser policy.
+
+The installed desktop's capability-root selection code admits enabled local marketplace plugins, and the local plugin listing includes this enabled plugin. This establishes local eligibility only. Existing desktop logs show local CUA startup, but do not expose the Work host's accepted roots or raw catalog.
+
 ## Local diagnostics and compatibility experiment
 
-Version 1.2.6 preserves the original code-mode and deferred exclusions. The diagnostic exercises both direct and code-mode-only configurations with the installed descriptor. Both tested local Core versions retain a native invocation route in this case.
+The original 1.2.6 diagnostic build preserved the code-mode and deferred exclusions. The diagnostic exercises both direct and code-mode-only configurations with the installed descriptor. Both tested local Core versions retain a native invocation route with those exclusions, despite the live Work failure.
 
-A separate local experiment removed only the code-mode exclusion. Actual calls through `tools.mcp__autonomous_cua_repl__js` received Core-generated current-turn and permission metadata, and `turn_ended` remained hidden. That demonstrates local compatibility, not a repair for the failing Work task. The candidate is not included in the release because the live host's registration and filtering stage remain unknown.
+The current unreleased candidate removes only the code-mode exclusion for a controlled comparison with the failing baseline. Actual local calls through `tools.mcp__autonomous_cua_repl__js` received Core-generated current-turn and permission metadata, and `turn_ended` remained hidden. That demonstrates local compatibility, not a repair for the failing Work task. The version stays at 1.2.6; the candidate remains unpublished pending a fresh live Work retest. Record its source revision and manifest fingerprint to distinguish the two builds without a version bump.
 
 The diagnostic's loopback responder supplies only a deterministic model tool call. Core creates the session, turn, and permission metadata. A transparent observer compares that MCP metadata with the current model request and thread, without modifying the traffic; receipts retain comparison results rather than identifiers. The registered lifecycle tool retains `_meta.ui.visibility: []` and must be absent from both callable catalogs.
 
