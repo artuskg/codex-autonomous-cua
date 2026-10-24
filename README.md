@@ -36,6 +36,12 @@ An absent convenience method can be handled by another documented capability in 
 
 Version 1.2.3 puts these general rules in the injected instructions. Platform recipes live in the [usage skill](marketplace/plugins/unified-computer-use/skills/use-autonomous-cua/SKILL.md), including macOS clipboard capture through the shell after an authorized UI Copy. The routing change does not add runtime APIs or change policy enforcement.
 
+### Certificate warnings
+
+Version 1.2.5 replaces mandatory user handoff for HTTPS certificate warnings, including `NET::ERR_CERT_AUTHORITY_INVALID`, with explicit approval for the displayed origin and error. The agent explains the risk, waits for approval, then uses the browser's normal visible proceed control through the shim. Approval already given for that same warning in the current task is sufficient. General task consent and automatic code review do not approve a certificate exception.
+
+The rule is delivered in the session instructions, usage skill, and runtime policy so the bundled Computer Use skill's handoff wording does not override it. Native policy denials remain binding; a missing proceed control remains a blocker. The shim does not disable TLS validation, change certificate trust stores, add hidden bypasses, or extend this exception to other safety barriers.
+
 ## Update
 
 Tell the agent **“Update Codex Autonomous CUA.”** Natural alternatives such as **“update no approvals codex”** and **“update no approvals cua”** select the same updater. You can also invoke `$update-autonomous-cua` directly. The shorter “update our shim” works when the conversation already identifies this plugin. The installed update skill runs:

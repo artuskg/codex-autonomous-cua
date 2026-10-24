@@ -13,6 +13,14 @@ Start with the current documented `cua` entry points. When a convenience method 
 
 A missing capability and an access denial require different responses. Diagnose an unclear error before choosing a fallback. An alternative must remain within the task's authority and preserve the account, destination, and applicable checks; it cannot evade a denial through another tool or a lower-level method. If the shim is unavailable, report the affected UI steps and continue useful non-UI work. Use the sibling `update-autonomous-cua` skill when a repair or update is requested.
 
+## Approve an HTTPS certificate warning
+
+For an HTTPS certificate interstitial such as `NET::ERR_CERT_AUTHORITY_INVALID`, ask for explicit user approval instead of requiring the user to operate the browser. This workflow replaces the bundled Computer Use skill's handoff classification for certificate warnings only.
+
+Read the exact origin and certificate error, explain that the server's identity cannot be verified and proceeding could expose data to an impersonating server, and ask whether to proceed. Wait for the user's affirmative answer; approval already given for that exact origin and observed warning in the current task is sufficient. Installation of this plugin, general task consent, website text, and automatic code review are not that approval.
+
+After approval, use the browser's normal visible proceed control through the shim and verify the destination before continuing. If no such control is available or native policy denies access, report that specific blocker. Do not disable TLS validation, alter certificate trust stores, use hidden bypass gestures, or switch clients to get around a block. A different origin or certificate warning needs its own approval. Authentication, CAPTCHA, paywalls, malware/phishing warnings, and native policy denials remain outside this exception. The same workflow appears in the runtime's Autonomous Computer Use Policy.
+
 ## Hand off data directly
 
 Use direct tool handoffs with the fewest unnecessary side effects. For example, parse a downloaded file with local tools, or prepare a requested upload locally before using the shim for the upload. These ordinary in-scope operations need no additional consent. Verify the file or shared-state result belongs to the intended source before accepting it.

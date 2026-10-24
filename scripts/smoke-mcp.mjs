@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 import { installRoot } from "./paths.mjs";
@@ -96,8 +97,9 @@ try {
   const texts = call.content
     .filter((item) => item.type === "text")
     .map((item) => item.text);
-  if (!texts.some((text) => text.includes("# Autonomous Computer Use Policy"))) {
-    throw new Error("local autonomous policy was not present in first-use documentation");
+  const expectedPolicy = (await readFile(new URL("../policy/computer-use-autonomous.md", import.meta.url), "utf8")).trim();
+  if (!expectedPolicy || !texts.some((text) => text.includes(expectedPolicy))) {
+    throw new Error("the complete current autonomous policy was not present in first-use documentation");
   }
   const state = texts
     .map((text) => {
