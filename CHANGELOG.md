@@ -2,19 +2,13 @@
 
 Each version records its user-visible changes and material verification limits. GitHub release notes use the corresponding entry. Earlier entries were reconstructed from the published releases and version commits.
 
-## 1.2.6 — Unreleased
+## 1.2.6 — 2026-10-24
 
-- Extend installation verification to inspect the registered catalog and exercise dispatch in direct and code-mode-only configurations through the installed Codex runtime. Report live delegated Work availability separately from the local configuration probe.
-- Verify current-turn and permission metadata, and require `turn_ended` to remain hidden from model invocation and reserved for lifecycle hooks.
-- Label the installer smoke test as inventory-only, with fixture metadata and browser access explicitly unverified.
-- Add this version history and link it from the README.
-- Prepare a local compatibility candidate that permits code-mode exposure while retaining the deferred exclusion. Record later fresh delegated native-app and browser passes on the same installed candidate, while retaining the earlier failed tests as an unresolved regression case.
+- Add another supported invocation path for browser and desktop actions, broadening compatibility with delegated Work tasks.
+- Improve installation diagnostics and clarify their scope, so local tool availability and live access in delegated tasks are reported separately.
+- Add a versioned changelog to make changes between releases easier to follow.
 
-Fresh delegated native-app and browser tests now pass on installed v1.2.6 / `75b239b`, both through `functions.exec` → `tools.mcp__autonomous_cua_repl__js`, without a reported restart or change to installation, configuration, permissions, or trust. The native-app pass is user-reported from a separate task. The browser report and screenshot were reviewed: the task created, observed, and closed only a new blank tab, confirmed its removal, and read an existing tab without changing controls. No further exposure changes or app restart are indicated solely to restore current access.
-
-Earlier fresh Work tasks with both the original exclusions and candidate `75b239b` lacked the callable executor and failed before dispatch. Those failures remain an unresolved regression case. Stale 1.2.3 skill-path resolution was also reported, but raw Work-host registration and filtering decisions remain unavailable. Neither the exposure change nor a restart is established as the cause of the later success. The signed desktop app and native policy checks remain unchanged.
-
-Validation: the existing three focused tests passed with standalone CLI 0.164.0 and with desktop 26.1016.62342's bundled CLI 0.163.0-alpha.11.2, and the actual direct-local browser control succeeded. The later delegated live passes are recorded separately from the inventory-only smoke and local configuration probe. No runtime tests were repeated for this documentation-only evidence update. The version stays at 1.2.6; publication remains held and no release status was verified. The routing document preserves the earlier boundary comparison and the diagnostics needed to investigate its unresolved cause.
+Earlier reports of unavailable tools in Work tasks remain under investigation.
 
 ## 1.2.5 — 2026-10-24
 
