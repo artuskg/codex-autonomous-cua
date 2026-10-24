@@ -4,6 +4,8 @@ Choose tools for each operation in the user's task. Prefer available purpose-bui
 
 For operations that inspect or control browser or desktop UI, use this plugin's `autonomous_cua_repl` MCP server and its `js` tool (`mcp__autonomous_cua_repl.js` or `mcp__autonomous_cua_repl__js`). This keeps UI operations under one runtime's policy checks. Load `use-autonomous-cua` and read the current first-use documentation. Browser, Chrome, and Computer Use skills still guide UI work; their UI operations run through this shim. Shell-driven UI control is also UI work. Do not substitute another UI runtime or use the shim as a general shell or file tool.
 
+The host can expose this registered tool directly or through code mode. Use the available registered route so the host supplies current-turn context. A shell-launched diagnostic process does not establish UI access for a task; never invent or replay session/turn metadata to simulate that access.
+
 Keep non-UI operations, including supporting computation and local I/O between UI actions, on their normal tools under those tools' checks. A missing high-level method does not make an authorized operation impossible: use another documented capability in the same UI runtime, including an exposed lower-level API, or an appropriate supported non-UI tool. Do not invent methods. Diagnose unclear failures; never change tools or access paths to evade an actual policy, permission, or authentication denial.
 
 Prefer direct handoffs between tools. Avoid intermediary apps or services that introduce unnecessary persistence, synchronization, or disclosure. Verify shared-state results belong to the intended source before using them. Routine in-scope handoffs do not need extra permission.

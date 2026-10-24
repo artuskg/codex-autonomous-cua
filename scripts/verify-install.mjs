@@ -2,8 +2,9 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { listPluginHooks } from "./list-plugin-hooks.mjs";
+import { listPluginHooks, withAppServer } from "./list-plugin-hooks.mjs";
 import { chooseCodex, installRoot } from "./paths.mjs";
+import { verifyToolRouting } from "./verify-tool-routing.mjs";
 
 const execFileAsync = promisify(execFile);
 const codex = await chooseCodex();
@@ -64,11 +65,37 @@ if (
 ) {
   throw new Error(`plugin hook trust validation failed: ${JSON.stringify(hooks)}`);
 }
+const registered = await withAppServer(codex, cwd, async (request) => {
+  const result = await request("mcpServerStatus/list", {
+    serverName, detail: "toolsAndAuthOnly", limit: 100,
+  }, 45_000);
+  return result.data?.find((entry) => entry.name === serverName);
+});
+if (registered?.pluginId !== pluginId || registered.toolsError) {
+  throw new Error(`registered plugin catalog is unavailable: ${registered?.toolsError ?? "missing plugin binding"}`);
+}
+const registeredTools = Object.values(registered.tools ?? {});
+for (const tool of ["js", "js_reset", "turn_ended"]) {
+  if (!registeredTools.some((entry) => entry.name === tool)) throw new Error(`registered catalog is missing ${tool}`);
+}
+const lifecycleVisibility = registeredTools.find((tool) => tool.name === "turn_ended")?._meta?.ui?.visibility;
+if (!Array.isArray(lifecycleVisibility) || lifecycleVisibility.length !== 0) {
+  throw new Error("turn_ended must remain hidden from model invocation");
+}
+const availability = await verifyToolRouting({ codex, serverConfig: {
+  ...mcp, ...resolvedMcp.transport,
+  enabled_tools: resolvedMcp.enabled_tools, disabled_tools: resolvedMcp.disabled_tools,
+} });
+if (!availability.ok) {
+  throw new Error(`local catalog/dispatch verification failed: ${JSON.stringify(availability)}`);
+}
 
 process.stdout.write(
   `${JSON.stringify(
     {
       ok: true,
+      scope: "installation_and_isolated_local_routes",
+      browserAccess: "not_verified",
       pluginId,
       plugin: {
         version: plugin.version,
@@ -78,7 +105,10 @@ process.stdout.write(
         server: serverName,
         command: resolvedMcp.transport.command,
         enabledTools: resolvedMcp.enabled_tools,
+        registeredTools: registeredTools.map((tool) => tool.name),
+        omitToolsFrom: mcp.omit_tools_from ?? [],
       },
+      availability,
       hooks: hooks.map(({ key, eventName, currentHash, trustStatus }) => ({
         key,
         eventName,

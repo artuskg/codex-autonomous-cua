@@ -6,6 +6,8 @@ It does **not** modify or re-sign `/Applications/ChatGPT.app`, replace the signe
 
 This repository contains original adapter code and short compatibility fingerprints. It does not redistribute the OpenAI runtime or generated overlays. See [NOTICE.md](NOTICE.md) for provenance, [LICENSE](LICENSE) for the MIT license on original code, and [PLAN.md](PLAN.md) for the design.
 
+See the [changelog](CHANGELOG.md) for changes and verification limits in every version, or browse the [GitHub releases](https://github.com/artuskg/codex-autonomous-cua/releases).
+
 Validated on October 22, 2026 with standalone Codex CLI `0.163.0`, ChatGPT desktop `26.1016.61520` (build `21421`), and its bundled Browser/Chrome/unified Computer Use plugins `26.1016.61520`. The runtime packages are `@oai/browser-desktop 0.1.1`, `@oai/sky 0.7.12`, `@oai/cua 0.2.6`, and `@oai/cua-repl 0.1.2`. Both the earlier named-capability consent binding and the newer Sky consent getter are supported.
 
 ## Install
@@ -16,7 +18,7 @@ Clone this repository, then run:
 /Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node scripts/install.mjs
 ```
 
-The installer builds the overlay and runs one quick runtime test before activation. It stages the shim under `~/.local/share/codex-autonomous-cua`, registers the `autonomous-cua-local` personal marketplace, enables its `unified-computer-use` plugin, disables only `unified-computer-use@openai-bundled`, and configures the three `autonomous_cua_repl` tools, their exact lifecycle cleanup hooks, and two agent-instruction hooks. The previous shim is kept at `~/.local/share/codex-autonomous-cua.previous`; an activation failure restores it and the prior configuration.
+The installer builds the overlay and runs one quick inventory test before activation. That test checks tool discovery, policy documentation, and app/browser inventory shape using fixture metadata; it does not establish live browser access or delegated-task availability. It stages the shim under `~/.local/share/codex-autonomous-cua`, registers the `autonomous-cua-local` personal marketplace, enables its `unified-computer-use` plugin, disables only `unified-computer-use@openai-bundled`, and configures the three `autonomous_cua_repl` tools, their exact lifecycle cleanup hooks, and two agent-instruction hooks. The previous shim is kept at `~/.local/share/codex-autonomous-cua.previous`; an activation failure restores it and the prior configuration.
 
 Start a new chat after installation; restart the desktop app when it has also been upgraded. An existing conversation keeps its loaded tool server until it is reloaded.
 
@@ -50,7 +52,7 @@ Tell the agent **“Update Codex Autonomous CUA.”** Natural alternatives such 
 "$HOME/.local/share/codex-autonomous-cua/bin/update-autonomous-cua"
 ```
 
-The command fetches the latest shim from this repository's `main` branch into a temporary checkout, rebuilds against the installed desktop app, tests the runtime once, and refreshes the local plugin, agent instructions, and hook trust. It never pulls into or overwrites a working Git checkout. It refuses a downgrade and leaves the existing installation in place when a changed runtime seam cannot be adapted.
+The command fetches the latest shim from this repository's `main` branch into a temporary checkout, rebuilds against the installed desktop app, checks runtime inventory once, and refreshes the local plugin, agent instructions, and hook trust. It never pulls into or overwrites a working Git checkout. It refuses a downgrade and leaves the existing installation in place when a changed runtime seam cannot be adapted.
 
 For an offline rebuild of the installed shim:
 
@@ -64,11 +66,17 @@ The launcher also detects desktop runtime changes on each start and automaticall
 
 ## Verify or roll back
 
-The update command already builds and tests the runtime. For an optional installation diagnostic:
+The update command already builds and checks runtime inventory. For an installation and routing diagnostic:
 
 ```sh
 /Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node scripts/verify-install.mjs
 ```
+
+The diagnostic checks the enabled plugin, merged MCP configuration, registered tool catalog, and five trusted hooks. It then runs two isolated local Codex configurations: direct tools and code-mode-only tools with the hotline-only namespace override used by durable Work tasks. A deterministic loopback responder invokes the real registered MCP tool; no model service is called. It checks the returned marker, host-generated session/turn binding, permission metadata, and hidden lifecycle tool. It does not open a browser or create a persistent task.
+
+Version 1.2.6 permits code-mode exposure while keeping tools out of deferred discovery. The host can expose `js` and `js_reset` directly or through code mode; `turn_ended` stays hidden and available to lifecycle hooks. No desktop app code or browser security check is changed.
+
+The report separates `directLocal` from `delegated`. The latter includes a local configuration probe but remains `not_verified` for a live Work task: this CLI cannot observe that host's capability registration or final catalog. A successful install or local probe must not be reported as working delegated browser access. See [the routing investigation](docs/tool-routing.md) for the platform boundary and remaining live check.
 
 To return to bundled Computer Use:
 

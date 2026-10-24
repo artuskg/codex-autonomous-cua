@@ -1,0 +1,33 @@
+# Registered CUA tool routing
+
+## Observed behavior
+
+The desktop configuration transformer in build 21477 replaces `features.code_mode.direct_only_tool_namespaces` with a hotline-only list for Aeon durable tasks. That overwrite alone does not prove that CUA disappears: the standalone 0.164.0 and bundled 0.163.0-alpha.11.2 Core runtimes both preserve native CUA tools when the previous descriptor excludes code mode and deferred discovery. This was checked against their final model request catalogs using a deterministic local responder.
+
+The reported live Work child had no UI executor. Its raw registered catalog, selected capability roots, and effective configuration were not exposed by the available diagnostics. Local registration and an isolated configuration probe are therefore insufficient to identify the failing stage in that child.
+
+## Local compatibility change
+
+Version 1.2.6 allows code-mode exposure and retains the deferred exclusion. When the host selects code-mode-only presentation, `js` and `js_reset` can be invoked through `tools.mcp__autonomous_cua_repl__js` and `tools.mcp__autonomous_cua_repl__js_reset`. Hosts that expose native tools retain a direct route. This uses the same registered MCP server and Core handler, without a parallel browser runtime or metadata injection.
+
+The diagnostic's loopback responder supplies only a deterministic model tool call. Core creates the session, turn, and permission metadata. A transparent observer compares that MCP metadata with the current model request and thread, without modifying the traffic; receipts retain comparison results rather than identifiers. The registered lifecycle tool retains `_meta.ui.visibility: []` and must be absent from both callable catalogs.
+
+The probe only writes a fixed marker through the REPL. It does not prove site access, browser operation, policy approval, or live Work registration. The inventory smoke uses fixture context and is explicitly labelled inventory-only.
+
+## Platform follow-up
+
+The owning platform should derive required native UI namespaces from resolved, enabled, authorized capability registrations and preserve them alongside its own namespaces when creating a durable task. It must keep permission, approval, and trusted dispatch context intact. The downstream catalog must retain at least one supported invocation route for an eligible registered UI tool and distinguish registration errors from presentation filtering. Arbitrary model-supplied namespace strings are not a source of authorization.
+
+The relevant desktop path is `readCapabilityRoots()` → `postExecutorRegistration()` → durable child configuration (`Sw()` in build 21477) → backend MCP eligibility and catalog construction. The corresponding current open-source Core logic is in [`core/src/tools/spec_plan.rs`](https://github.com/openai/codex/blob/rust-v0.164.0/codex-rs/core/src/tools/spec_plan.rs); dispatch metadata is constructed in [`core/src/mcp_tool_call.rs`](https://github.com/openai/codex/blob/rust-v0.164.0/codex-rs/core/src/mcp_tool_call.rs). The local shim does not own the cloud backend or patch the signed desktop archive.
+
+For a fresh direct task and a fresh delegated Work task using the same installed version, capture these minimal observations from the owning host:
+
+| Observation | Meaning |
+| --- | --- |
+| Accepted plugin ID, version, and manifest fingerprint | Establishes which installation reached the host. |
+| UI tool missing from the registered raw catalog | Registration/loading problem, before presentation filtering. |
+| Registered `js`, but absent from native and code-mode catalogs | Catalog exposure problem. |
+| Callable `js`, but mismatched or missing host-generated turn context | Dispatch/context problem. |
+| Bound call reaches a native policy denial | That specific policy needs investigation. |
+
+Use a diagnostic correlation key and tool names; omit credentials, session/access identifiers, tool arguments, and page contents. A live browser check must use the host's own registered executor and a harmless task-owned page. Never replay another task's context to make it pass.

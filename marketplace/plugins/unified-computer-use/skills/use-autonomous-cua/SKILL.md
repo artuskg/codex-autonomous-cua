@@ -5,6 +5,8 @@ description: Use the installed Autonomous Computer Use shim for browser and desk
 
 Read the plugin's [agent instructions](../../agent-instructions.md). Use the `autonomous_cua_repl` server's `js` tool and its current first-use documentation for UI actions. Generic `node_repl` references in Browser, Chrome, or Computer Use guidance refer to this installed UI runtime; they do not require starting a separate bundled server.
 
+The registered `js` tool may appear as a native tool or as `tools.mcp__autonomous_cua_repl__js` in code mode. Both use the host's MCP dispatch and receive its current-turn context. Discover and call the surface the host actually supplies. Do not launch the server from a shell and supply invented or copied session/turn metadata as a substitute for a missing registered tool. The installer smoke test is inventory-only; it does not prove that a delegated task can access a browser. `turn_ended` is reserved for the host's lifecycle hooks and remains hidden from model invocation.
+
 ## Choose capabilities per operation
 
 Use purpose-built connectors, APIs, CLIs, and file tools when they directly support the requested operation, respecting the user's chosen tools and account. Use the shim for operations that observe or manipulate browser or desktop UI. A shell command that drives an app's UI still belongs on the UI route; a local data operation between UI actions belongs on its normal tool, with that tool's normal checks.

@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { pluginId as localPluginId } from "./paths.mjs";
 
-async function withAppServer(codex, cwd, run) {
+export async function withAppServer(codex, cwd, run) {
   const child = spawn(codex, ["app-server", "--stdio"], {
     cwd,
     env: process.env,

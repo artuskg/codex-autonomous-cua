@@ -44,7 +44,7 @@ async function main() {
   let originalConfig;
   let configCaptured = false;
   try {
-    for (const entry of ["bin", "marketplace", "policy", "scripts", "README.md", "PLAN.md", "LICENSE", "NOTICE.md"]) {
+    for (const entry of ["bin", "docs", "marketplace", "policy", "scripts", "README.md", "PLAN.md", "CHANGELOG.md", "LICENSE", "NOTICE.md"]) {
       await cp(join(sourceRoot, entry), join(staging, entry), { recursive: true, preserveTimestamps: true });
     }
     const launcher = await materializeMcpLauncher(staging);

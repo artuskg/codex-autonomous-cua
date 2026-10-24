@@ -122,6 +122,10 @@ try {
     `${JSON.stringify(
       {
         ok: true,
+        scope: "inventory_only",
+        turnContext: "fixture",
+        browserAccess: "not_verified",
+        delegatedAvailability: "not_verified",
         launcher,
         protocolVersion: initialize.protocolVersion,
         serverInfo: initialize.serverInfo,

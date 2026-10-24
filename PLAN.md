@@ -29,10 +29,12 @@ The activation boundary is plugin selection. There is deliberately no VM marker,
 
 ## Validation
 
-- The installer builds the overlay once, including seam matching and syntax checks, and performs one MCP runtime smoke test that checks the exported tools, the complete current local policy in first-use documentation, and application/browser state shape.
-- Installation refreshes the local plugin and its five current hook hashes. `verify-install.mjs` is an optional diagnostic for the enabled plugin, merged MCP registration, and hook trust.
+- The installer builds the overlay once, including seam matching and syntax checks, and performs one inventory-only MCP smoke test that checks the exported tools, the complete current local policy in first-use documentation, and application/browser state shape. Its fixture metadata does not establish browser access or delegated availability.
+- Installation refreshes the local plugin and its five current hook hashes. `verify-install.mjs` checks the enabled plugin, merged MCP registration, raw tool catalog, and hook trust, then exercises direct and code-mode dispatch through two isolated local Codex configurations. A deterministic local responder drives the actual Core catalog and MCP handlers without a model request. The verifier checks Core-generated turn and permission metadata; it never fabricates or replays that context.
+- Local configuration probes are distinct from live delegated Work verification. The report leaves the latter unverified because only its host owns the actual capability roots and final tool catalog. `turn_ended` must remain hidden on all model-callable surfaces.
 - `node --test tests/hook-trust.test.mjs` covers passing legacy and compound trust values unchanged to Codex, and rejection of missing values or hooks from another plugin. Set `AUTONOMOUS_CUA_TEST_CODEX` to a Codex 0.164.0 or later executable to also test native compound-hash storage in an isolated temporary config.
-- `node --test tests/sky-policy.test.mjs` covers both Sky consent-binding shapes and exercises the installed transformed policy with isolated app-policy/consent stubs. These tests preserve blocked-app decisions and the separate audio prompt; the MCP smoke test supplies live-runtime coverage.
+- `node --test tests/sky-policy.test.mjs` covers both Sky consent-binding shapes and exercises the installed transformed policy with isolated app-policy/consent stubs. These tests preserve blocked-app decisions and the separate audio prompt; the MCP smoke test supplies runtime inventory coverage only.
+- `node --test tests/tool-routing.test.mjs` checks routing-report boundaries. Set `AUTONOMOUS_CUA_TEST_CODEX` to an installed Codex executable to include actual catalog and dispatch checks through the source launcher.
 
 ## Rollback
 
@@ -41,6 +43,8 @@ Disable `unified-computer-use@autonomous-cua-local` and re-enable `unified-compu
 ## Known compatibility boundary
 
 The local marketplace and plugin-scoped MCP approval settings are supported extension points. The Browser, Sky, and CUA source transforms are reverse-engineered adapters. Desktop updates should normally rebuild automatically; a changed source seam requires updating and revalidating this adapter. Dot compatibility is maximized by preserving the plugin name, server name, tool names, and hooks, but must be rechecked after desktop updates because the exact bundled plugin identity is not a documented Dot contract.
+
+Version 1.2.6 removes only the descriptor's code-mode exclusion, providing a registered code-mode route while preserving the deferred exclusion and lifecycle visibility metadata. Core supplies trusted turn context and permission checks on both invocation routes. This compatibility change does not alter the desktop's durable-task configuration transformer or establish the cause of a live delegated failure; [the platform follow-up](docs/tool-routing.md) records that boundary.
 
 ## Agent-driven updates
 
