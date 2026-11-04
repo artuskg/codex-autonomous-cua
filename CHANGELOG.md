@@ -2,6 +2,13 @@
 
 Each version records its user-visible changes and material verification limits. GitHub release notes use the corresponding entry. Earlier entries were reconstructed from the published releases and version commits.
 
+## 1.2.7 — 2026-11-04
+
+- Support Sky 0.7.17's guarded consent getter through its exact `nodeRepl` accessor, while refusing unrelated or ambiguous accessor chains.
+- Preserve native app-policy decisions and the separate audio prompt. Focused tests exercise these boundaries against the installed runtime.
+- Invalidate older generated overlays so the compatibility change is rebuilt.
+- Verify registration, hook trust, and direct/code-mode local dispatch with standalone CLI `0.166.0` and bundled CLI `0.166.0-alpha.6` on desktop `26.1029.61003` (build `24614`). Live in-app browser navigation and native Calculator state access passed in a direct chat without restarting the app. Live delegated Work availability remains separately unverified for this version.
+
 ## 1.2.6 — 2026-10-24
 
 - Add another supported invocation path for browser and desktop actions, broadening compatibility with delegated Work tasks.

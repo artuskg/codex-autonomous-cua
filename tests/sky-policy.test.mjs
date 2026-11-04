@@ -16,6 +16,25 @@ for (const getter of ['b("createElicitation")', 'get$()']) {
   });
 }
 
+test("supports the guarded indirect nodeRepl getter without widening the accepted source", () => {
+  const accessor = 'function repl$(){return globalThis.nodeRepl}';
+  const helper = 'function get$(){const n=repl$(),t=null==n?void 0:n.createElicitation;if("function"!=typeof t)throw new Error("Computer Use requires nodeRepl.createElicitation");return t}';
+  const policy = 'function* app(){const consent$=get$(),client=yield next(),policy=client.getAppPolicy();switch(policy.decision){case"allowed":break;case"denied":throw 1;case"forbidden":throw 2;}}function requestComputerAudioApproval(){const audio=get$();}';
+  const source = `${policy}${helper}${accessor}`;
+  const output = transformSky(source);
+  assert.match(output, /consent\$=async/);
+  assert.ok(output.includes('const audio=get$();'));
+  assert.ok(output.endsWith(`${helper}${accessor}`));
+  for (const changed of [
+    source.replace('return globalThis.nodeRepl', 'return globalThis.other'),
+    source.replace('const n=repl$()', 'const n=other()'),
+    source.replace('n.createElicitation', 'n.other'),
+    source.replace('return t}', 'return fallback}'),
+    source + 'function repl$(){return globalThis.other}',
+    source + 'const extra=get$();',
+  ]) assert.throws(() => transformSky(changed), /compatibility check failed/);
+});
+
 test("installed Sky still denies blocked apps and prompts for audio", async (t) => {
   const root = process.env.AUTONOMOUS_CUA_APP_ROOT ?? "/Applications/ChatGPT.app";
   let original;

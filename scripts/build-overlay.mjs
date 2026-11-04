@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 const execFileAsync = promisify(execFile);
 const sourceFile = fileURLToPath(import.meta.url);
 const adapterRoot = dirname(dirname(sourceFile));
-const transformVersion = 3;
+const transformVersion = 4;
 
 const browserRelative = "@oai/browser-desktop/scripts/browser-service.mjs";
 const skyRelative =
@@ -169,8 +169,19 @@ export function transformSky(source) {
     "Sky no longer has the expected app and audio elicitation pair",
   );
   if (!namedCapability) {
+    const directGetter = new RegExp(`function ${escapeRegExp(getter)}\\(\\)\\{[^{}]{0,700}globalThis\\.nodeRepl[^{}]{0,700}\\.createElicitation[^{}]{0,700}return [A-Za-z_$][\\w$]*\\}`).test(source);
+    // Sky 0.7.17 factors nodeRepl access into a separate zero-argument helper.
+    // Accept only the observed guarded getter and an exact nodeRepl accessor,
+    // not an arbitrary indirection or fallback consent provider.
+    const indirectGetter = source.match(new RegExp(
+      `function ${escapeRegExp(getter)}\\(\\)\\{const ([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\(\\),([A-Za-z_$][\\w$]*)=null==\\1\\?void 0:\\1\\.createElicitation;if\\("function"!=typeof \\3\\)throw new Error\\("Computer Use requires nodeRepl.createElicitation"\\);return \\3\\}`,
+    ));
+    const accessor = indirectGetter?.[2];
+    const indirectNodeRepl = accessor &&
+      occurrences(source, `function ${accessor}(){return globalThis.nodeRepl}`) === 1 &&
+      [...source.matchAll(new RegExp(`function ${escapeRegExp(accessor)}\\(`, "g"))].length === 1;
     invariant(
-      new RegExp(`function ${escapeRegExp(getter)}\\(\\)\\{[^{}]{0,700}globalThis\\.nodeRepl[^{}]{0,700}\\.createElicitation[^{}]{0,700}return [A-Za-z_$][\\w$]*\\}`).test(source),
+      directGetter || indirectNodeRepl,
       "Sky app-consent getter no longer resolves nodeRepl.createElicitation",
     );
   }

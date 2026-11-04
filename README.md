@@ -10,6 +10,10 @@ See the [changelog](CHANGELOG.md) for changes and verification limits in every v
 
 Validated on October 22, 2026 with standalone Codex CLI `0.163.0`, ChatGPT desktop `26.1016.61520` (build `21421`), and its bundled Browser/Chrome/unified Computer Use plugins `26.1016.61520`. The runtime packages are `@oai/browser-desktop 0.1.1`, `@oai/sky 0.7.12`, `@oai/cua 0.2.6`, and `@oai/cua-repl 0.1.2`. Both the earlier named-capability consent binding and the newer Sky consent getter are supported.
 
+The 1.2.7 compatibility adapter additionally recognizes Sky 0.7.17's guarded getter through an exact `nodeRepl` accessor. Verified on November 4, 2026 against desktop `26.1029.61003` (build `24614`), standalone CLI `0.166.0`, and bundled CLI `0.166.0-alpha.6`. All eight focused policy and hook-trust tests passed, including denied/forbidden app decisions and separate audio consent. Registration, hook trust, and direct/code-mode local dispatch checks passed with both CLIs.
+
+Live in-app browser navigation and native Calculator state access also passed in a direct chat without restarting the app. This establishes access in that chat; live delegated Work availability remains separately unverified for 1.2.7.
+
 ## Install
 
 Clone this repository, then run:
