@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 import { installRoot } from "./paths.mjs";
+import { inventoryMarker, parseInventoryResult } from "./smoke-inventory.mjs";
 
 const launcher =
   process.env.AUTONOMOUS_CUA_LAUNCHER ??
@@ -83,7 +84,7 @@ try {
   const call = await request("tools/call", {
     name: "js",
     arguments: {
-      code: "const smokeState = await cua.getState({emit:false}); nodeRepl.write(JSON.stringify({apps:Array.isArray(smokeState.apps),browsers:Array.isArray(smokeState.browsers)}));",
+      code: `const smokeState = await cua.getState({emit:false}); nodeRepl.write(${JSON.stringify(inventoryMarker)} + JSON.stringify({apps:Array.isArray(smokeState.apps),browsers:Array.isArray(smokeState.browsers)}));`,
       title: "Smoke test autonomous CUA",
     },
     _meta: {
@@ -101,15 +102,7 @@ try {
   if (!expectedPolicy || !texts.some((text) => text.includes(expectedPolicy))) {
     throw new Error("the complete current autonomous policy was not present in first-use documentation");
   }
-  const state = texts
-    .map((text) => {
-      try {
-        return JSON.parse(text);
-      } catch {
-        return null;
-      }
-    })
-    .find((value) => value?.apps === true && value?.browsers === true);
+  const state = parseInventoryResult(texts);
   if (!state) {
     const diagnostic = texts
       .filter((text) => !text.includes("# Autonomous Computer Use Policy"))

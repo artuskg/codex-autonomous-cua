@@ -2,6 +2,12 @@
 
 Each version records its user-visible changes and material verification limits. GitHub release notes use the corresponding entry. Earlier entries were reconstructed from the published releases and version commits.
 
+## 1.2.9 — 2026-11-14
+
+- Fix installation when an SDK warning and the inventory JSON arrive in the same MCP text block, as observed on Galahad. The smoke test now identifies its own result with a unique marker and parses that line independently of diagnostic output.
+- Continue requiring exactly one successful app/browser inventory result, the complete current policy, and all overlay compatibility checks. Unmarked JSON, duplicate results, malformed data, and unsuccessful inventory are rejected.
+- Four focused parser regression tests passed. The fixed installer also passed its preactivation check on Galahad with ChatGPT desktop `26.1106.51428` (build `26605`). These checks cover inventory and policy delivery; they do not establish live browser access. The CAPTCHA instructions and runtime enforcement are unchanged from 1.2.8.
+
 ## 1.2.8 — 2026-11-14
 
 - Preauthorize completing CAPTCHA challenges through their normal visible controls during an otherwise authorized task, without a confirmation or user handoff solely because a CAPTCHA is present. External CAPTCHA-solving services still require separate authorization.
