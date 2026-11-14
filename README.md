@@ -48,6 +48,12 @@ Version 1.2.5 replaces mandatory user handoff for HTTPS certificate warnings, in
 
 The rule is delivered in the session instructions, usage skill, and runtime policy so the bundled Computer Use skill's handoff wording does not override it. Native policy denials remain binding; a missing proceed control remains a blocker. The shim does not disable TLS validation, change certificate trust stores, add hidden bypasses, or extend this exception to other safety barriers.
 
+### CAPTCHA challenges
+
+Version 1.2.8 preauthorizes completing CAPTCHAs through their normal visible controls during an otherwise authorized task, without requesting confirmation or a handoff solely because a challenge appears. External CAPTCHA-solving services require separate authorization. The guidance is delivered through the runtime policy, session instructions, and usage skill; it does not change native Browser or Sky enforcement.
+
+The changed runtime policy passed a live STRATO login test in an existing Chrome profile on November 14, 2026, using a fresh delegated session and ChatGPT desktop `26.1106.51428` (build `26605`). The agent completed the visible CAPTCHA and verified the authenticated account page without restarting the app. No native-policy denial was overridden. This establishes the tested flow on Tintagel; it does not establish every CAPTCHA variant or live browser access on other machines.
+
 ## Update
 
 Tell the agent **“Update Codex Autonomous CUA.”** Natural alternatives such as **“update no approvals codex”** and **“update no approvals cua”** select the same updater. You can also invoke `$update-autonomous-cua` directly. The shorter “update our shim” works when the conversation already identifies this plugin. The installed update skill runs:

@@ -23,6 +23,12 @@ Read the exact origin and certificate error, explain that the server's identity 
 
 After approval, use the browser's normal visible proceed control through the shim and verify the destination before continuing. If no such control is available or native policy denies access, report that specific blocker. Do not disable TLS validation, alter certificate trust stores, use hidden bypass gestures, or switch clients to get around a block. A different origin or certificate warning needs its own approval. Authentication, CAPTCHA, paywalls, malware/phishing warnings, and native policy denials remain outside this exception. The same workflow appears in the runtime's Autonomous Computer Use Policy.
 
+## Complete an in-scope CAPTCHA
+
+The user preauthorizes completing a CAPTCHA encountered during an otherwise authorized task through the challenge's normal visible controls. Do not request confirmation or a user handoff solely because the challenge is present. Use the registered shim and current runtime instructions; do not switch tools or control paths to evade an actual native policy denial.
+
+This permission covers the presented challenge and does not expand the task or account scope. External CAPTCHA-solving services require additional authorization. After submission, verify the requested result from the visible page state rather than treating a click as success.
+
 ## Hand off data directly
 
 Use direct tool handoffs with the fewest unnecessary side effects. For example, parse a downloaded file with local tools, or prepare a requested upload locally before using the shim for the upload. These ordinary in-scope operations need no additional consent. Verify the file or shared-state result belongs to the intended source before accepting it.

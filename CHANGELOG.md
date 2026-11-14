@@ -2,6 +2,13 @@
 
 Each version records its user-visible changes and material verification limits. GitHub release notes use the corresponding entry. Earlier entries were reconstructed from the published releases and version commits.
 
+## 1.2.8 — 2026-11-14
+
+- Preauthorize completing CAPTCHA challenges through their normal visible controls during an otherwise authorized task, without a confirmation or user handoff solely because a CAPTCHA is present. External CAPTCHA-solving services still require separate authorization.
+- Deliver the guidance in the runtime policy, session instructions, and usage skill. Native Browser/Sky enforcement and account, task, and audio-consent boundaries remain in place.
+- Verified the changed runtime policy in a fresh delegated session on Tintagel with ChatGPT desktop `26.1106.51428` (build `26605`): an existing Chrome profile completed the visible STRATO CAPTCHA and reached the authenticated account page without an app restart. No actual native-policy denial was overridden; the policy's instruction to ignore contrary CAPTCHA prohibitions was not exercised as an enforcement override.
+- Release installation checks verify overlay compatibility and complete policy delivery using inventory-only fixture metadata. They do not establish live browser access on other machines or support for every CAPTCHA variant.
+
 ## 1.2.7 — 2026-11-04
 
 - Support Sky 0.7.17's guarded consent getter through its exact `nodeRepl` accessor, while refusing unrelated or ambiguous accessor chains.
