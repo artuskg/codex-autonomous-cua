@@ -2,6 +2,13 @@
 
 Each version records its user-visible changes and material verification limits. GitHub release notes use the corresponding entry. Earlier entries were reconstructed from the published releases and version commits.
 
+## 1.2.10 — 2026-11-20
+
+- Fix the overlay build with ChatGPT desktop `26.1111.71704` (build `29030`). Its re-minified CUA documentation module renames the locals around the request-metadata confirmation-policy seam, so 1.2.9 stopped with "confirmation-policy seam is not unique" and the `autonomous_cua_repl` server did not start.
+- Support build `29030` only for its verified module bytes (SHA-256 `f53c7f1b…`): the overlay makes one exact insertion and checks the result against a pinned output hash. Every other source keeps the exact 1.2.9 match and is refused unless that seam occurs exactly once, so a renamed or restructured module stops the build instead of being patched by shape. Older generated overlays are invalidated.
+- In build `29030`, an `aeon` product SKU in object-form turn metadata makes the module drop all confirmation text. Autonomous runs now receive the local policy in that case too. Runs without `AUTONOMOUS_CUA=1` behave exactly as the unmodified module, and `orbit` still yields no confirmation text, as in earlier builds. Codex `0.171.0` forwards `product_sku` only to `node_repl` and `cua_repl`, so this path is not reached through `autonomous_cua_repl` today.
+- For every cached overlay from builds `20156` to `27194` (18 overlays, three distinct source files, originals hash-checked against their manifests), the new transform's output is byte-identical to 1.2.9's. On build `29030`, eight focused tests and a full overlay build with syntax and compatibility checks passed. The tests compare the installed module with and without the insertion across environment, request-policy and product-SKU cases. The installer's inventory smoke test, tool-routing checks and live browser or app access were not run for this build before release.
+
 ## 1.2.9 — 2026-11-14
 
 - Fix installation when an SDK warning and the inventory JSON arrive in the same MCP text block, as observed on Galahad. The smoke test now identifies its own result with a unique marker and parses that line independently of diagnostic output.

@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 const execFileAsync = promisify(execFile);
 const sourceFile = fileURLToPath(import.meta.url);
 const adapterRoot = dirname(dirname(sourceFile));
-const transformVersion = 4;
+const transformVersion = 5;
 
 const browserRelative = "@oai/browser-desktop/scripts/browser-service.mjs";
 const skyRelative =
@@ -210,11 +210,47 @@ export function transformSky(source) {
   return source;
 }
 
-function transformCuaDocumentation(source) {
+// Desktop build 29030 (26.1111.71704) re-minified the CUA documentation module,
+// so the 1.2.9 seam below no longer occurs. Its selector is installed only into
+// these verified source bytes, with one exact insertion whose output is also
+// pinned. The insertion precedes the module's new early return, so an `aeon`
+// product SKU no longer drops the autonomous policy; `orbit` still returns no
+// confirmation text, as in earlier builds, and runs without AUTONOMOUS_CUA are
+// unchanged.
+export const verifiedCuaDocumentation = Object.freeze({
+  f53c7f1b1e2ce1eabca53b5cfff089d256c230b5d1f7566fe9b77e0b410e2a6f: Object.freeze({
+    build: "26.1111.71704 (29030)",
+    seam: 'if("orbit"===r||"aeon"===(null==t?void 0:t.product_sku))return"";',
+    insertion: 'if("orbit"!==r&&"1"===(null==i?void 0:null==i.env?void 0:i.env.AUTONOMOUS_CUA))return n("confirmations");',
+    outputHash: "fe00526f79e8e62a88736f42c6b779f9ed8604b04675bc6683d47aee91f7e5bc",
+  }),
+});
+
+export function transformCuaDocumentation(source, verified = verifiedCuaDocumentation) {
+  const sourceHash = sha256(source);
+  const pinned = Object.hasOwn(verified, sourceHash) ? verified[sourceHash] : undefined;
+  if (pinned) {
+    invariant(
+      occurrences(source, pinned.seam) === 1,
+      `verified CUA documentation seam for ${pinned.build} is not unique`,
+    );
+    const seamIndex = source.indexOf(pinned.seam);
+    const output = source.slice(0, seamIndex) + pinned.insertion + source.slice(seamIndex);
+    invariant(
+      occurrences(output, "AUTONOMOUS_CUA") === 1,
+      "CUA autonomous policy selector was not installed exactly once",
+    );
+    invariant(
+      sha256(output) === pinned.outputHash,
+      `CUA documentation output for ${pinned.build} differs from the verified output`,
+    );
+    return output;
+  }
+  // Every other source keeps the exact 1.2.9 match and replacement.
   const seam = 'return void 0!==r?r:"training"===e?"":n("confirmations")';
   invariant(
     occurrences(source, seam) === 1,
-    "CUA request-metadata confirmation-policy seam is not unique",
+    `CUA request-metadata confirmation-policy seam is not unique (source sha256 ${sourceHash} is not a verified build)`,
   );
   const replacement =
     'return"1"===(null==i?void 0:null==i.env?void 0:i.env.AUTONOMOUS_CUA)?n("confirmations"):void 0!==r?r:"training"===e?"":n("confirmations")';
