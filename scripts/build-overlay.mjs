@@ -19,9 +19,10 @@ import { fileURLToPath } from "node:url";
 const execFileAsync = promisify(execFile);
 const sourceFile = fileURLToPath(import.meta.url);
 const adapterRoot = dirname(dirname(sourceFile));
-const transformVersion = 5;
+const transformVersion = 6;
 
 const browserRelative = "@oai/browser-desktop/scripts/browser-service.mjs";
+const browserCoreRelative = join(dirname(browserRelative), "browser-service-core.mjs");
 const skyRelative =
   "@oai/sky/dist/project/cua/sky_js/src/targets/mac/computer-use-policy.js";
 const cuaDocsRelative =
@@ -44,7 +45,7 @@ function escapeRegExp(value) {
 }
 
 function declarationPattern(identifier, rest) {
-  return new RegExp(`(?<![\\w$])${escapeRegExp(identifier)}=${rest}`);
+  return new RegExp(`(?<![\\w$])${escapeRegExp(identifier)}=${rest}`, "g");
 }
 
 function occurrences(source, needle) {
@@ -81,30 +82,50 @@ async function readPlistValue(infoPlist, key) {
   return stdout.trim();
 }
 
-function transformBrowser(source) {
-  const enumPattern =
-    /([A-Za-z_$][\w$]*)\.DisabledForLocalTesting="disabled-for-local-testing",/g;
-  const enumMatches = [...source.matchAll(enumPattern)];
+const browserEnumPattern =
+  /([A-Za-z_$][\w$]*)\.DisabledForLocalTesting="disabled-for-local-testing",/g;
+const browserTablePattern =
+  /\{"":\{bypassedSecurityChecks:([A-Za-z_$][\w$]*),operationsWithoutUserConsent:\1\},"disabled-for-local-testing":\{bypassedSecurityChecks:([A-Za-z_$][\w$]*),operationsWithoutUserConsent:([A-Za-z_$][\w$]*)\},"gaas-browser-environment":/g;
+
+export function getBrowserCoreRelative(entry) {
+  const references = occurrences(entry, "browser-service-core.mjs");
+  if (references === 0) return undefined;
+  // The split entry lazily imports a sibling through a local path binding.
+  const lazyImport =
+    /(?<![\w$])var ([A-Za-z_$][\w$]*)="\.\/browser-service-core\.mjs",([A-Za-z_$][\w$]*),[A-Za-z_$][\w$]*=\(\)=>\2\?\?=import\(\1\);/g;
+  invariant(
+    references === 1 && [...entry.matchAll(lazyImport)].length === 1,
+    "Browser service core import seam is not unique",
+  );
+  invariant(
+    [...entry.matchAll(browserEnumPattern)].length === 0 &&
+      [...entry.matchAll(browserTablePattern)].length === 0,
+    "Browser split service entry unexpectedly contains a security-mode seam",
+  );
+  return browserCoreRelative;
+}
+
+export function transformBrowser(source) {
+  const enumMatches = [...source.matchAll(browserEnumPattern)];
   invariant(enumMatches.length === 1, "Browser security-mode enum seam is not unique");
   const enumVariable = enumMatches[0][1];
   source = source.replace(
-    enumPattern,
+    browserEnumPattern,
     (seam) => `${seam}${enumVariable}.AutonomousVm="autonomous-vm",`,
   );
 
-  const tablePattern =
-    /\{"":\{bypassedSecurityChecks:([A-Za-z_$][\w$]*),operationsWithoutUserConsent:\1\},"disabled-for-local-testing":\{bypassedSecurityChecks:([A-Za-z_$][\w$]*),operationsWithoutUserConsent:([A-Za-z_$][\w$]*)\},"gaas-browser-environment":/g;
-  const tableMatches = [...source.matchAll(tablePattern)];
+  const tableMatches = [...source.matchAll(browserTablePattern)];
   invariant(tableMatches.length === 1, "Browser security-mode policy table seam is not unique");
   const [matched, defaultBypassSet, disabledBypassSet, consentSet] = tableMatches[0];
   invariant(
-    declarationPattern(defaultBypassSet, "new Set(?:\\(\\))?[,;]").test(source),
-    "Browser default bypass set is no longer empty",
+    [...source.matchAll(declarationPattern(defaultBypassSet, "new Set(?:\\(\\))?[,;]"))].length === 1,
+    "Browser default empty bypass set is missing or not unique",
   );
-  const consentDeclaration = source.match(
-    declarationPattern(consentSet, "new Set\\(\\[([^\\]]+)\\]\\)"),
-  );
-  invariant(consentDeclaration, "Browser consent-operation set was not found");
+  const consentDeclarations = [
+    ...source.matchAll(declarationPattern(consentSet, "new Set\\(\\[([^\\]]+)\\]\\)")),
+  ];
+  invariant(consentDeclarations.length === 1, "Browser consent-operation set is missing or not unique");
+  const [consentDeclaration] = consentDeclarations;
   for (const operation of [
     "browser-history-read",
     "browser-origin-access",
@@ -210,19 +231,22 @@ export function transformSky(source) {
   return source;
 }
 
-// Desktop build 29030 (26.1111.71704) re-minified the CUA documentation module,
-// so the 1.2.9 seam below no longer occurs. Its selector is installed only into
-// these verified source bytes, with one exact insertion whose output is also
-// pinned. The insertion precedes the module's new early return, so an `aeon`
-// product SKU no longer drops the autonomous policy; `orbit` still returns no
-// confirmation text, as in earlier builds, and runs without AUTONOMOUS_CUA are
-// unchanged.
+// These builds lack the legacy seam. Install the selector only on verified
+// source bytes, using one exact insertion with a pinned output. It takes
+// precedence over product-SKU and request policy for autonomous runs; orbit
+// still omits confirmations, and other runs retain the upstream behavior.
 export const verifiedCuaDocumentation = Object.freeze({
   f53c7f1b1e2ce1eabca53b5cfff089d256c230b5d1f7566fe9b77e0b410e2a6f: Object.freeze({
     build: "26.1111.71704 (29030)",
     seam: 'if("orbit"===r||"aeon"===(null==t?void 0:t.product_sku))return"";',
     insertion: 'if("orbit"!==r&&"1"===(null==i?void 0:null==i.env?void 0:i.env.AUTONOMOUS_CUA))return n("confirmations");',
     outputHash: "fe00526f79e8e62a88736f42c6b779f9ed8604b04675bc6683d47aee91f7e5bc",
+  }),
+  "5a299e4742b282245dd2bf28b90eb1a926b353e71c3baa5875b66d017e429dd5": Object.freeze({
+    build: "26.1117.41037 (29803)",
+    seam: 'if("orbit"===i)return"";',
+    insertion: 'if("orbit"!==i&&"1"===(null==t?void 0:null==t.env?void 0:t.env.AUTONOMOUS_CUA))return e("confirmations");',
+    outputHash: "928b2a45cd5893eccb79231383fa80dfb5b1cc73b12cac09975b83251f9ff89d",
   }),
 });
 
@@ -349,13 +373,20 @@ async function syntaxCheck(nodePath, paths) {
   }
 }
 
-async function verifyCachedOverlay(target, fingerprint) {
+async function verifyCachedOverlay(target, fingerprint, browserCore) {
   try {
     const manifest = await readJson(join(target, "manifest.json"));
     if (manifest.fingerprint !== fingerprint || manifest.transformVersion !== transformVersion) {
       return null;
     }
     await access(join(target, "node_modules", browserRelative));
+    if (browserCore) {
+      const entryHash = await hashFile(join(target, "node_modules", browserRelative));
+      const coreHash = await hashFile(join(target, "node_modules", browserCore));
+      if (entryHash !== manifest.outputHashes.browser || coreHash !== manifest.outputHashes.browserCore) {
+        return null;
+      }
+    }
     await access(join(target, "node_modules", skyRelative));
     await access(join(target, "node_modules", cuaDocsRelative));
     return manifest;
@@ -389,6 +420,9 @@ export async function buildOverlay(options = {}) {
     await access(path);
   }
   await access(appNode);
+  const browserEntry = await readFile(paths.browser);
+  const browserCore = getBrowserCoreRelative(browserEntry.toString("utf8"));
+  if (browserCore) paths.browserCore = join(sourceNodeModules, browserCore);
 
   const [appVersion, appBuild] = await Promise.all([
     readPlistValue(infoPlist, "CFBundleShortVersionString"),
@@ -407,7 +441,7 @@ export async function buildOverlay(options = {}) {
   );
   const sourceHashes = {};
   for (const [name, path] of Object.entries(paths)) {
-    sourceHashes[name] = await hashFile(path);
+    sourceHashes[name] = name === "browser" ? sha256(browserEntry) : await hashFile(path);
   }
   const fingerprint = sha256(
     JSON.stringify({
@@ -425,7 +459,7 @@ export async function buildOverlay(options = {}) {
     `${appVersion}-${appBuild}-${fingerprint.slice(0, 24)}`,
   );
   await mkdir(overlaysRoot, { recursive: true });
-  const cached = await verifyCachedOverlay(target, fingerprint);
+  const cached = await verifyCachedOverlay(target, fingerprint, browserCore);
   if (cached) {
     return { path: target, manifest: cached, cached: true };
   }
@@ -444,24 +478,34 @@ export async function buildOverlay(options = {}) {
       "copied dependency closure differs from the fingerprinted closure",
     );
     const outputBrowser = join(outputNodeModules, browserRelative);
+    const outputBrowserCore = browserCore ? join(outputNodeModules, browserCore) : undefined;
+    const browserTransformTarget = outputBrowserCore ?? outputBrowser;
     const outputSky = join(outputNodeModules, skyRelative);
     const outputCuaDocs = join(outputNodeModules, cuaDocsRelative);
     const outputConfirmation = join(outputNodeModules, confirmationRelative);
 
-    await writeFile(
-      outputBrowser,
-      transformBrowser(await readFile(outputBrowser, "utf8")),
+    invariant(
+      await hashFile(outputBrowser) === sourceHashes.browser &&
+        (!outputBrowserCore || await hashFile(outputBrowserCore) === sourceHashes.browserCore),
+      "copied browser modules differ from the fingerprinted sources",
     );
+    await writeFile(browserTransformTarget, transformBrowser(await readFile(browserTransformTarget, "utf8")));
     await writeFile(outputSky, transformSky(await readFile(outputSky, "utf8")));
     await writeFile(
       outputCuaDocs,
       transformCuaDocumentation(await readFile(outputCuaDocs, "utf8")),
     );
     await writeFile(outputConfirmation, await readFile(policyPath));
-    await syntaxCheck(appNode, [outputBrowser, outputSky, outputCuaDocs]);
+    await syntaxCheck(appNode, [
+      outputBrowser,
+      ...(outputBrowserCore ? [outputBrowserCore] : []),
+      outputSky,
+      outputCuaDocs,
+    ]);
 
     const outputHashes = {
       browser: await hashFile(outputBrowser),
+      ...(outputBrowserCore ? { browserCore: await hashFile(outputBrowserCore) } : {}),
       sky: await hashFile(outputSky),
       cuaDocs: await hashFile(outputCuaDocs),
       confirmationPolicy: await hashFile(outputConfirmation),
@@ -495,7 +539,7 @@ export async function buildOverlay(options = {}) {
     try {
       await rename(staging, target);
     } catch (error) {
-      const winner = await verifyCachedOverlay(target, fingerprint);
+      const winner = await verifyCachedOverlay(target, fingerprint, browserCore);
       if (!winner) {
         throw error;
       }

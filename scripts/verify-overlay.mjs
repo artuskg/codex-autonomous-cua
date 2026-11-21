@@ -1,12 +1,16 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { buildOverlay, transformSky } from "./build-overlay.mjs";
+import { buildOverlay, getBrowserCoreRelative, transformSky } from "./build-overlay.mjs";
 
 const { path, manifest, cached } = await buildOverlay();
-const browser = await readFile(
+const browserEntry = await readFile(
   join(path, "node_modules/@oai/browser-desktop/scripts/browser-service.mjs"),
   "utf8",
 );
+const browserCore = getBrowserCoreRelative(browserEntry);
+const browser = browserCore
+  ? await readFile(join(path, "node_modules", browserCore), "utf8")
+  : browserEntry;
 const sky = await readFile(
   join(
     path,
