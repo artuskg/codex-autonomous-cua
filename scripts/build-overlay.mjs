@@ -4,25 +4,29 @@ import {
   access,
   chmod,
   cp,
+  lstat,
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   rename,
   rm,
   writeFile,
 } from "node:fs/promises";
-import { promisify } from "node:util";
+import { isDeepStrictEqual, promisify } from "node:util";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
 const sourceFile = fileURLToPath(import.meta.url);
 const adapterRoot = dirname(dirname(sourceFile));
-const transformVersion = 6;
+const transformVersion = 7;
 
 const browserRelative = "@oai/browser-desktop/scripts/browser-service.mjs";
-const browserCoreRelative = join(dirname(browserRelative), "browser-service-core.mjs");
+const verifiedSplitBrowserEntries = Object.freeze({
+  "41f17b10c08b8bb38a663b837aabe00d72a4b7344b3d1c816ec8a03849136c54": "browser-service-core.mjs",
+});
 const skyRelative =
   "@oai/sky/dist/project/cua/sky_js/src/targets/mac/computer-use-policy.js";
 const cuaDocsRelative =
@@ -88,21 +92,17 @@ const browserTablePattern =
   /\{"":\{bypassedSecurityChecks:([A-Za-z_$][\w$]*),operationsWithoutUserConsent:\1\},"disabled-for-local-testing":\{bypassedSecurityChecks:([A-Za-z_$][\w$]*),operationsWithoutUserConsent:([A-Za-z_$][\w$]*)\},"gaas-browser-environment":/g;
 
 export function getBrowserCoreRelative(entry) {
-  const references = occurrences(entry, "browser-service-core.mjs");
-  if (references === 0) return undefined;
-  // The split entry lazily imports a sibling through a local path binding.
-  const lazyImport =
-    /(?<![\w$])var ([A-Za-z_$][\w$]*)="\.\/browser-service-core\.mjs",([A-Za-z_$][\w$]*),[A-Za-z_$][\w$]*=\(\)=>\2\?\?=import\(\1\);/g;
+  const entryHash = sha256(entry);
+  if (Object.hasOwn(verifiedSplitBrowserEntries, entryHash)) {
+    return join(dirname(browserRelative), verifiedSplitBrowserEntries[entryHash]);
+  }
+  const source = entry.toString("utf8");
   invariant(
-    references === 1 && [...entry.matchAll(lazyImport)].length === 1,
-    "Browser service core import seam is not unique",
+    !Object.values(verifiedSplitBrowserEntries).some((name) => source.includes(name)) &&
+      source.search(browserEnumPattern) !== -1 && source.search(browserTablePattern) !== -1,
+    `Browser entry sha256 ${entryHash} is not a verified split entry and lacks the monolithic layout`,
   );
-  invariant(
-    [...entry.matchAll(browserEnumPattern)].length === 0 &&
-      [...entry.matchAll(browserTablePattern)].length === 0,
-    "Browser split service entry unexpectedly contains a security-mode seam",
-  );
-  return browserCoreRelative;
+  return undefined;
 }
 
 export function transformBrowser(source) {
@@ -373,26 +373,56 @@ async function syntaxCheck(nodePath, paths) {
   }
 }
 
-async function verifyCachedOverlay(target, fingerprint, browserCore) {
+async function lstatIfPresent(path) {
   try {
-    const manifest = await readJson(join(target, "manifest.json"));
-    if (manifest.fingerprint !== fingerprint || manifest.transformVersion !== transformVersion) {
-      return null;
-    }
-    await access(join(target, "node_modules", browserRelative));
-    if (browserCore) {
-      const entryHash = await hashFile(join(target, "node_modules", browserRelative));
-      const coreHash = await hashFile(join(target, "node_modules", browserCore));
-      if (entryHash !== manifest.outputHashes.browser || coreHash !== manifest.outputHashes.browserCore) {
-        return null;
-      }
-    }
-    await access(join(target, "node_modules", skyRelative));
-    await access(join(target, "node_modules", cuaDocsRelative));
-    return manifest;
-  } catch {
-    return null;
+    return await lstat(path);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
   }
+}
+
+async function checkedModulePath(root, module, { allowMissingFile = false } = {}) {
+  const path = resolve(root, module);
+  const parts = relative(resolve(root), path).split(sep);
+  invariant(parts[0] && parts[0] !== ".." && !isAbsolute(module), `module path leaves its root: ${module}`);
+  invariant((await lstat(root)).isDirectory(), `module root is not a real directory: ${root}`);
+  const canonicalRoot = await realpath(root);
+  let current = root;
+  for (const part of parts.slice(0, -1)) {
+    current = join(current, part);
+    invariant((await lstat(current)).isDirectory(), `module ancestor is not a real directory: ${current}`);
+  }
+  const file = await lstatIfPresent(path);
+  invariant(file?.isFile() || (!file && allowMissingFile), `module is not a regular file: ${path}`);
+  const resolved = file ? path : dirname(path);
+  const expected = join(canonicalRoot, relative(root, resolved));
+  invariant(await realpath(resolved) === expected, `module path leaves its root: ${path}`);
+  return path;
+}
+
+async function verifyOverlayBytes(nodeModules, outputPaths, expectedOutputs) {
+  for (const [name, module] of Object.entries(outputPaths)) {
+    const path = await checkedModulePath(nodeModules, module);
+    invariant(
+      (await readFile(path)).equals(expectedOutputs[name]),
+      `overlay bytes differ from the fingerprinted source transform: ${module}`,
+    );
+  }
+}
+
+async function verifyCachedOverlay(target, { fingerprint, sourceHashes, outputPaths, expectedOutputs, outputHashes }) {
+  const directory = await lstatIfPresent(target);
+  if (!directory) return null;
+  invariant(directory.isDirectory(), `overlay cache target is not a real directory: ${target}`);
+  await verifyOverlayBytes(join(target, "node_modules"), outputPaths, expectedOutputs);
+  const manifest = await readJson(await checkedModulePath(target, "manifest.json"));
+  invariant(
+    manifest.fingerprint === fingerprint && manifest.transformVersion === transformVersion &&
+      isDeepStrictEqual(manifest.sourceHashes, sourceHashes) &&
+      isDeepStrictEqual(manifest.outputHashes, outputHashes),
+    `overlay cache manifest differs from the verified overlay: ${target}`,
+  );
+  return manifest;
 }
 
 export async function buildOverlay(options = {}) {
@@ -409,20 +439,48 @@ export async function buildOverlay(options = {}) {
   const appNode = join(resources, "cua_node", "bin", "node");
   const infoPlist = join(appRoot, "Contents", "Info.plist");
   const policyPath = join(adapterRoot, "policy", "computer-use-autonomous.md");
-  const paths = {
-    browser: join(sourceNodeModules, browserRelative),
-    sky: join(sourceNodeModules, skyRelative),
-    cuaDocs: join(sourceNodeModules, cuaDocsRelative),
-    policy: policyPath,
-    builder: sourceFile,
+  const modulePaths = {
+    browser: browserRelative,
+    sky: skyRelative,
+    cuaDocs: cuaDocsRelative,
   };
-  for (const path of Object.values(paths)) {
-    await access(path);
+  const browserPath = await checkedModulePath(sourceNodeModules, browserRelative);
+  // Reject linked siblings before hashing even the entry, since the entry pin
+  // selects which sibling participates in this build.
+  for (const name of new Set(Object.values(verifiedSplitBrowserEntries))) {
+    await checkedModulePath(sourceNodeModules, join(dirname(browserRelative), name), { allowMissingFile: true });
   }
+  const browserEntry = await readFile(browserPath);
+  const browserCore = getBrowserCoreRelative(browserEntry);
+  if (browserCore) modulePaths.browserCore = browserCore;
+
+  const sourceBytes = { browser: browserEntry };
+  for (const [name, module] of Object.entries(modulePaths)) {
+    if (name !== "browser") {
+      sourceBytes[name] = await readFile(await checkedModulePath(sourceNodeModules, module));
+    }
+  }
+  const policy = await readFile(policyPath);
+  const sourceHashes = {
+    browser: sha256(browserEntry),
+    sky: sha256(sourceBytes.sky),
+    cuaDocs: sha256(sourceBytes.cuaDocs),
+    policy: sha256(policy),
+    builder: await hashFile(sourceFile),
+    ...(browserCore ? { browserCore: sha256(sourceBytes.browserCore) } : {}),
+  };
+  const outputPaths = { ...modulePaths, confirmationPolicy: confirmationRelative };
+  const expectedOutputs = {
+    browser: browserCore ? browserEntry : Buffer.from(transformBrowser(browserEntry.toString("utf8"))),
+    ...(browserCore ? { browserCore: Buffer.from(transformBrowser(sourceBytes.browserCore.toString("utf8"))) } : {}),
+    sky: Buffer.from(transformSky(sourceBytes.sky.toString("utf8"))),
+    cuaDocs: Buffer.from(transformCuaDocumentation(sourceBytes.cuaDocs.toString("utf8"))),
+    confirmationPolicy: policy,
+  };
+  const outputHashes = Object.fromEntries(
+    Object.entries(expectedOutputs).map(([name, bytes]) => [name, sha256(bytes)]),
+  );
   await access(appNode);
-  const browserEntry = await readFile(paths.browser);
-  const browserCore = getBrowserCoreRelative(browserEntry.toString("utf8"));
-  if (browserCore) paths.browserCore = join(sourceNodeModules, browserCore);
 
   const [appVersion, appBuild] = await Promise.all([
     readPlistValue(infoPlist, "CFBundleShortVersionString"),
@@ -439,10 +497,6 @@ export async function buildOverlay(options = {}) {
     sourceNodeModules,
     rootPackages,
   );
-  const sourceHashes = {};
-  for (const [name, path] of Object.entries(paths)) {
-    sourceHashes[name] = name === "browser" ? sha256(browserEntry) : await hashFile(path);
-  }
   const fingerprint = sha256(
     JSON.stringify({
       transformVersion,
@@ -459,7 +513,8 @@ export async function buildOverlay(options = {}) {
     `${appVersion}-${appBuild}-${fingerprint.slice(0, 24)}`,
   );
   await mkdir(overlaysRoot, { recursive: true });
-  const cached = await verifyCachedOverlay(target, fingerprint, browserCore);
+  const expectation = { fingerprint, sourceHashes, outputPaths, expectedOutputs, outputHashes };
+  const cached = await verifyCachedOverlay(target, expectation);
   if (cached) {
     return { path: target, manifest: cached, cached: true };
   }
@@ -477,39 +532,23 @@ export async function buildOverlay(options = {}) {
         JSON.stringify(dependencyClosure.packages),
       "copied dependency closure differs from the fingerprinted closure",
     );
-    const outputBrowser = join(outputNodeModules, browserRelative);
-    const outputBrowserCore = browserCore ? join(outputNodeModules, browserCore) : undefined;
-    const browserTransformTarget = outputBrowserCore ?? outputBrowser;
-    const outputSky = join(outputNodeModules, skyRelative);
-    const outputCuaDocs = join(outputNodeModules, cuaDocsRelative);
-    const outputConfirmation = join(outputNodeModules, confirmationRelative);
-
-    invariant(
-      await hashFile(outputBrowser) === sourceHashes.browser &&
-        (!outputBrowserCore || await hashFile(outputBrowserCore) === sourceHashes.browserCore),
-      "copied browser modules differ from the fingerprinted sources",
-    );
-    await writeFile(browserTransformTarget, transformBrowser(await readFile(browserTransformTarget, "utf8")));
-    await writeFile(outputSky, transformSky(await readFile(outputSky, "utf8")));
-    await writeFile(
-      outputCuaDocs,
-      transformCuaDocumentation(await readFile(outputCuaDocs, "utf8")),
-    );
-    await writeFile(outputConfirmation, await readFile(policyPath));
-    await syntaxCheck(appNode, [
-      outputBrowser,
-      ...(outputBrowserCore ? [outputBrowserCore] : []),
-      outputSky,
-      outputCuaDocs,
-    ]);
-
-    const outputHashes = {
-      browser: await hashFile(outputBrowser),
-      ...(outputBrowserCore ? { browserCore: await hashFile(outputBrowserCore) } : {}),
-      sky: await hashFile(outputSky),
-      cuaDocs: await hashFile(outputCuaDocs),
-      confirmationPolicy: await hashFile(outputConfirmation),
-    };
+    const stagingPaths = {};
+    for (const [name, module] of Object.entries(outputPaths)) {
+      stagingPaths[name] = await checkedModulePath(outputNodeModules, module, {
+        allowMissingFile: name === "confirmationPolicy",
+      });
+    }
+    for (const [name, bytes] of Object.entries(sourceBytes)) {
+      invariant(
+        (await readFile(stagingPaths[name])).equals(bytes),
+        `copied module differs from the fingerprinted source: ${modulePaths[name]}`,
+      );
+    }
+    for (const [name, bytes] of Object.entries(expectedOutputs)) {
+      if (name !== "browser" || !browserCore) await writeFile(stagingPaths[name], bytes);
+    }
+    await syntaxCheck(appNode, Object.keys(modulePaths).map((name) => stagingPaths[name]));
+    await verifyOverlayBytes(outputNodeModules, outputPaths, expectedOutputs);
     const manifest = {
       schemaVersion: 1,
       transformVersion,
@@ -539,7 +578,7 @@ export async function buildOverlay(options = {}) {
     try {
       await rename(staging, target);
     } catch (error) {
-      const winner = await verifyCachedOverlay(target, fingerprint, browserCore);
+      const winner = await verifyCachedOverlay(target, expectation);
       if (!winner) {
         throw error;
       }

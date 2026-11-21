@@ -4,9 +4,10 @@ Each version records its user-visible changes and material verification limits. 
 
 ## 1.2.11 — 2026-11-21
 
-- Fix the overlay build with ChatGPT desktop `26.1117.41037` (build `29803`). The builder follows the Browser entry's lazy import and applies the existing security-mode transform to the sibling core. The entry stays byte-identical, and the core participates in the overlay fingerprint and cache checks.
+- Fix the overlay build with ChatGPT desktop `26.1117.41037` (build `29803`). The builder requires an exact SHA-256 match for the split Browser entry before applying the existing security-mode transform to its sibling core. It rejects linked Browser files and directories in the source, staging and cached overlays.
 - Pin the 29803 CUA documentation source and output around one exact insertion. Autonomous runs receive the local confirmation policy outside `orbit`. Other runs retain the desktop's request, product, and CAPTCHA policy behavior.
-- Full overlay builds and static verification passed on builds `29803` and `29030`. The 29030 payload matches 1.2.10 byte-for-byte. Each offline test run passed 26 tests with two live Codex checks skipped. The 29803 Browser entry and core, Sky policy, and CUA documentation passed syntax and import checks with bundled Node. Live relaunch and tool dispatch remain unverified.
+- Warm overlay lookups on both split and monolithic layouts recompute the expected Browser, Sky, CUA documentation and confirmation-policy bytes from the source inputs. The builder and verifier refuse mismatches, including when a cached file's manifest hash has also been edited.
+- Cold builds and warm verification passed on builds `29803` and `29030`. The 29030 payload matches 1.2.10 byte-for-byte. The 29803 Browser entry and core, Sky policy, and CUA documentation passed offline syntax and import checks with bundled Node. Live relaunch and tool dispatch remain unverified.
 
 ## 1.2.10 — 2026-11-20
 

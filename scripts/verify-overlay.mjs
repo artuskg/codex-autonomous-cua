@@ -1,16 +1,19 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { buildOverlay, getBrowserCoreRelative, transformSky } from "./build-overlay.mjs";
+import { buildOverlay, getBrowserCoreRelative } from "./build-overlay.mjs";
 
+// The builder recomputes and verifies every transformed file before returning.
 const { path, manifest, cached } = await buildOverlay();
 const browserEntry = await readFile(
   join(path, "node_modules/@oai/browser-desktop/scripts/browser-service.mjs"),
-  "utf8",
 );
-const browserCore = getBrowserCoreRelative(browserEntry);
+const browserCore = manifest.sourceHashes.browserCore ? getBrowserCoreRelative(browserEntry) : undefined;
+if (manifest.sourceHashes.browserCore && !browserCore) {
+  throw new Error("overlay verification failed: Browser split entry does not match its pin");
+}
 const browser = browserCore
   ? await readFile(join(path, "node_modules", browserCore), "utf8")
-  : browserEntry;
+  : browserEntry.toString("utf8");
 const sky = await readFile(
   join(
     path,
@@ -25,7 +28,6 @@ const cuaDocs = await readFile(
   ),
   "utf8",
 );
-const sourceSky = await readFile(join(manifest.app.path, "Contents/Resources/cua_node/lib/node_modules/@oai/sky/dist/project/cua/sky_js/src/targets/mac/computer-use-policy.js"), "utf8");
 const checks = {
   browserMode: browser.includes('AutonomousVm="autonomous-vm"'),
   browserPolicy: /"autonomous-vm":\{bypassedSecurityChecks:[A-Za-z_$][\w$]*,operationsWithoutUserConsent:[A-Za-z_$][\w$]*\}/.test(
@@ -36,7 +38,8 @@ const checks = {
   skyPolicy: sky.includes(".getAppPolicy("),
   skyDenied: sky.includes('case"denied"'),
   skyForbidden: sky.includes('case"forbidden"'),
-  skyOnlyAudioPrompt: sky === transformSky(sourceSky),
+  skyOnlyAudioPrompt: sky.includes("requestComputerAudioApproval") &&
+    sky.includes("computer-use-persisted-state"),
   cuaLocalPolicySelector: cuaDocs.includes("AUTONOMOUS_CUA"),
   nativeServiceUnmodified: manifest.guarantees.nativeComputerUseServiceUnmodified,
 };

@@ -21,9 +21,7 @@ const operations = [
 const consentSet = `consent=new Set(${JSON.stringify(operations)})`;
 const core = `const mode={};(${enumSeam}mode);const empty=new Set,${consentSet},local=new Set(["check-navigation-url-policy","check-url-site-status"]),table=${policyTable};`;
 
-test("uses the sibling core for the split layout and preserves the entry import", () => {
-  assert.equal(getBrowserCoreRelative(entry), "@oai/browser-desktop/scripts/browser-service-core.mjs");
-  assert.throws(() => transformBrowser(entry), /enum seam is not unique/);
+test("patches the enum and policy table in Browser transform inputs", () => {
   const patched = transformBrowser(core);
   assert.equal(patched, core
     .replace(enumSeam, `${enumSeam}mode.AutonomousVm="autonomous-vm",`)
@@ -35,17 +33,17 @@ test("uses the existing seams in a monolithic browser service", () => {
   assert.match(transformBrowser(core), /mode\.AutonomousVm="autonomous-vm"/);
 });
 
-test("refuses duplicate, rewired, or ambiguous browser core imports", () => {
-  for (const source of [
-    entry + lazyImport,
-    entry.replace("import(path$)", "import(other)"),
-    entry.replace("cache??=", "other??="),
-    entry + 'const duplicate="./browser-service-core.mjs";',
-  ]) assert.throws(() => getBrowserCoreRelative(source), /core import seam is not unique/);
-  for (const seam of [enumSeam, policyTable]) {
-    assert.throws(() => getBrowserCoreRelative(entry + seam), /entry unexpectedly contains a security-mode seam/);
-  }
-});
+for (const [label, source] of [
+  ["a Browser core import present only in a comment", `/*${lazyImport}*/export const handleRpc=()=>null;`],
+  ["a Browser entry with a second dynamic import", entry + 'export const other=()=>import("./other.mjs");'],
+  ["an unknown Browser split entry matching the former import seam", entry],
+  ["an unknown Browser entry with zero legacy seams", "export const handleRpc=()=>null;"],
+  ["an ambiguous Browser entry with split and monolithic markers", entry + core],
+]) {
+  test(`refuses ${label}`, () => {
+    assert.throws(() => getBrowserCoreRelative(source), /is not a verified split entry/);
+  });
+}
 
 test("refuses missing or duplicated browser policy seams and bindings", () => {
   for (const [seam, error] of [
